@@ -1,0 +1,17 @@
+# Dipendenze e build
+node_modules/
+.next/
+out/
+build/
+
+# Variabili d'ambiente segrete
+.env
+.env*.local
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Altri file di sistema
+.DS_Store
+*.pem

@@ -80,7 +80,13 @@ export default async function ExperiencePage({ params }: PageProps) {
       </footer>
 
       {expData.nexus_bot_id && (
-        <NexusWidget botId={expData.nexus_bot_id} brandColor={expData.brand_color} />
+        <NexusWidget
+          botId={expData.nexus_bot_id}
+          brandColor={expData.brand_color}
+          nomeRistorante={expData.nome_ristorante}
+          logoUrl={expData.logo_url}
+          ownerName={expData.owner_name}
+        />
       )}
     </main>
   );

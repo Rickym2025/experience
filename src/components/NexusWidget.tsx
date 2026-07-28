@@ -11,12 +11,16 @@ interface NexusWidgetProps {
   botId: string;
   brandColor?: string;
   nomeRistorante?: string;
+  logoUrl?: string | null;
+  ownerName?: string | null;
 }
 
 export default function NexusWidget({
   botId,
-  brandColor = '#06b6d4',
-  nomeRistorante = 'Ristorante',
+  brandColor = '#68a19b',
+  nomeRistorante = 'Locanda Venezze',
+  logoUrl,
+  ownerName,
 }: NexusWidgetProps) {
   const [isOpen, setIsOpen] = useState(true);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -24,12 +28,12 @@ export default function NexusWidget({
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // 1. RECUPERO O INIZIALIZZAZIONE SESSIONE PERSISTENTE
   const storageKey = `nexus_chat_${botId}`;
   const historyKey = `nexus_history_${botId}`;
 
+  const maitreTitle = ownerName ? `Maître Virtuale di ${ownerName}` : `Maître Virtuale AI`;
+
   useEffect(() => {
-    // Carica storico messaggi o sequenza di benvenuto
     const savedHistory = sessionStorage.getItem(historyKey);
     if (savedHistory) {
       try {
@@ -43,12 +47,11 @@ export default function NexusWidget({
   }, [botId]);
 
   const initWelcomeMessages = () => {
-    const welcome: Message[] = [
-      {
-        sender: 'bot',
-        text: `Benvenuto da **${nomeRistorante}**! 🍷\nSono il Maître Virtuale. Cosa posso fare per te stasera?`,
-      },
-    ];
+    const welcomeText = ownerName
+      ? `Benvenuto da **${nomeRistorante}**! 🍷\nSono il Maître Virtuale di **${ownerName}**. Cosa posso fare per te stasera?`
+      : `Benvenuto da **${nomeRistorante}**! 🍷\nSono il Maître Virtuale. Cosa posso fare per te stasera?`;
+
+    const welcome: Message[] = [{ sender: 'bot', text: welcomeText }];
     setMessages(welcome);
     sessionStorage.setItem(historyKey, JSON.stringify(welcome));
   };
@@ -57,7 +60,6 @@ export default function NexusWidget({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
 
-  // INVIO MESSAGGIO A N8N
   const handleSend = async (textToSend?: string) => {
     const text = (textToSend || inputValue).trim();
     if (!text || isLoading) return;
@@ -86,7 +88,7 @@ export default function NexusWidget({
       });
 
       const data = await res.json();
-      const replyText = data.response || data.output || 'Siamo a tua disposizione per assisterti.';
+      const replyText = data.response || data.output || 'Siamo a tua disposizione per qualsiasi richiesta.';
 
       const updatedMessages: Message[] = [
         ...newMessages,
@@ -97,7 +99,7 @@ export default function NexusWidget({
     } catch (err) {
       const errorMsg: Message = {
         sender: 'bot',
-        text: 'Servizio di assistenza momentaneamente non disponibile. Riprova tra poco.',
+        text: 'Servizio temporaneamente non disponibile. Riprova tra poco.',
       };
       setMessages((prev) => [...prev, errorMsg]);
     } finally {
@@ -107,48 +109,56 @@ export default function NexusWidget({
 
   return (
     <>
-      {/* PULSANTE BUBBLE IN BASSO A SINISTRA SE CHIUSO */}
+      {/* BOTTONE BUBBLE FLUTTUANTE SE CHIUSO */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 left-6 z-50 w-14 h-14 rounded-full bg-[#0a0a10] border-2 text-white flex items-center justify-center shadow-2xl transition-transform hover:scale-110 active:scale-95"
+          className="fixed bottom-6 left-6 z-50 w-16 h-16 rounded-full bg-[#0a0a10] border-2 text-white flex items-center justify-center shadow-2xl transition-transform hover:scale-110 active:scale-95"
           style={{
             borderColor: brandColor,
-            boxShadow: `0 0 20px ${brandColor}60`,
+            boxShadow: `0 0 25px ${brandColor}80`,
           }}
-          title="Apri Maître Virtuale"
+          title={maitreTitle}
         >
-          <span className="text-2xl">🍷</span>
+          {logoUrl ? (
+            <img src={logoUrl} alt="Logo" className="w-10 h-10 object-contain rounded-full" />
+          ) : (
+            <span className="text-2xl">🍷</span>
+          )}
         </button>
       )}
 
-      {/* FINESTRA CHAT (FULLSCREEN SU MOBILE, IN BASSO A SINISTRA SU DESKTOP) */}
+      {/* FINESTRA CHAT MAÎTRE VIRTUALE */}
       {isOpen && (
         <div
-          className="fixed z-50 inset-0 sm:inset-auto sm:bottom-6 sm:left-6 sm:w-[390px] sm:h-[620px] bg-[#08080d]/98 backdrop-blur-2xl border-0 sm:border-2 rounded-none sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl transition-all"
+          className="fixed z-50 inset-0 sm:inset-auto sm:bottom-6 sm:left-6 sm:w-[400px] sm:h-[630px] bg-[#08080d]/98 backdrop-blur-2xl border-0 sm:border-2 rounded-none sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl transition-all"
           style={{
             borderColor: brandColor,
-            boxShadow: `0 0 35px ${brandColor}40`,
+            boxShadow: `0 0 35px ${brandColor}50`,
           }}
         >
-          {/* HEADER CHAT CON EFFETTO GLOW */}
+          {/* HEADER CHAT CON LOGO VERO ED INTESTAZIONE PERSONALIZZATA */}
           <div
             className="p-4 border-b border-white/10 flex items-center justify-between shrink-0 bg-[#0c0c14]"
             style={{ borderBottomColor: `${brandColor}40` }}
           >
             <div className="flex items-center gap-3">
               <div
-                className="w-10 h-10 rounded-full flex items-center justify-center text-lg shadow-md shrink-0"
-                style={{ backgroundColor: `${brandColor}20`, border: `1px solid ${brandColor}` }}
+                className="w-11 h-11 rounded-full flex items-center justify-center overflow-hidden shrink-0"
+                style={{ backgroundColor: `${brandColor}20`, border: `2px solid ${brandColor}` }}
               >
-                🍷
+                {logoUrl ? (
+                  <img src={logoUrl} alt={nomeRistorante} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-xl">🍷</span>
+                )}
               </div>
               <div>
                 <h4 className="text-sm font-black text-white leading-tight">
-                  Maître Virtuale AI
+                  {maitreTitle}
                 </h4>
-                <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1 mt-0.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-[11px] font-bold flex items-center gap-1.5 mt-0.5" style={{ color: brandColor }}>
+                  <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: brandColor }} />
                   {nomeRistorante}
                 </span>
               </div>
@@ -162,7 +172,7 @@ export default function NexusWidget({
             </button>
           </div>
 
-          {/* PULSANTI DI SERVIZIO SEMPRE IN PRIMO PIANO IN ALTO */}
+          {/* PULSANTI SERVIZIO SEMPRE IN PRIMO PIANO IN ALTO */}
           <div className="p-2.5 bg-[#050508] border-b border-white/5 flex gap-2 overflow-x-auto scrollbar-none shrink-0">
             <button
               onClick={() => handleSend('Consigliami il menu perfetto per stasera')}
@@ -172,7 +182,8 @@ export default function NexusWidget({
             </button>
             <button
               onClick={() => handleSend('Vorrei prenotare un tavolo')}
-              className="px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap bg-white/5 hover:bg-white/10 text-amber-400 border border-amber-500/20 transition"
+              className="px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap text-black font-extrabold transition shadow-md"
+              style={{ backgroundColor: brandColor }}
             >
               📅 Prenota Tavolo
             </button>
@@ -184,7 +195,7 @@ export default function NexusWidget({
             </button>
           </div>
 
-          {/* MESSAGGI CONVERSAZIONE */}
+          {/* MESSAGGI CHAT */}
           <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-[#030306]">
             {messages.map((m, idx) => (
               <div
@@ -196,7 +207,7 @@ export default function NexusWidget({
                 <div
                   className={`max-w-[85%] p-3.5 rounded-2xl text-xs md:text-sm leading-relaxed ${
                     m.sender === 'user'
-                      ? 'text-black font-semibold rounded-br-none'
+                      ? 'text-black font-extrabold rounded-br-none'
                       : 'bg-[#12121c] text-gray-100 border border-white/10 rounded-bl-none'
                   }`}
                   style={{
@@ -214,16 +225,16 @@ export default function NexusWidget({
             {isLoading && (
               <div className="flex justify-start">
                 <div className="bg-[#12121c] border border-white/10 p-3 rounded-2xl text-xs text-gray-400 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce" />
-                  <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce delay-100" />
-                  <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce delay-200" />
+                  <span className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: brandColor }} />
+                  <span className="w-2 h-2 rounded-full animate-bounce delay-100" style={{ backgroundColor: brandColor }} />
+                  <span className="w-2 h-2 rounded-full animate-bounce delay-200" style={{ backgroundColor: brandColor }} />
                 </div>
               </div>
             )}
             <div ref={messagesEndRef} />
           </div>
 
-          {/* INPUT TESTO IN BASSO */}
+          {/* INPUT TESTO */}
           <div className="p-3 bg-[#0c0c14] border-t border-white/10 flex gap-2 shrink-0">
             <input
               type="text"

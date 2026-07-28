@@ -128,16 +128,20 @@ export default function NexusWidget({
         </button>
       )}
 
-      {/* FINESTRA CHAT MAÎTRE VIRTUALE */}
+      {/* FINESTRA CHAT RIDIMENSIONABILE (DESKTOP LARGHEZZA 450PX, MOBILE FULLSCREEN) */}
       {isOpen && (
         <div
-          className="fixed z-50 inset-0 sm:inset-auto sm:bottom-6 sm:left-6 sm:w-[400px] sm:h-[630px] bg-[#08080d]/98 backdrop-blur-2xl border-0 sm:border-2 rounded-none sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl transition-all"
+          className="fixed z-50 inset-0 sm:inset-auto sm:bottom-6 sm:left-6 sm:w-[450px] sm:h-[640px] bg-[#08080d]/98 backdrop-blur-2xl border-0 sm:border-2 rounded-none sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl transition-all resize sm:resize-both"
           style={{
             borderColor: brandColor,
             boxShadow: `0 0 35px ${brandColor}50`,
+            minWidth: '340px',
+            maxWidth: '700px',
+            minHeight: '480px',
+            maxHeight: '90vh',
           }}
         >
-          {/* HEADER CHAT CON LOGO VERO ED INTESTAZIONE PERSONALIZZATA */}
+          {/* HEADER CHAT CON LOGO VERO ED INTESTAZIONE */}
           <div
             className="p-4 border-b border-white/10 flex items-center justify-between shrink-0 bg-[#0c0c14]"
             style={{ borderBottomColor: `${brandColor}40` }}
@@ -172,30 +176,33 @@ export default function NexusWidget({
             </button>
           </div>
 
-          {/* PULSANTI SERVIZIO SEMPRE IN PRIMO PIANO IN ALTO */}
-          <div className="p-2.5 bg-[#050508] border-b border-white/5 flex gap-2 overflow-x-auto scrollbar-none shrink-0">
+          {/* PULSANTI SERVIZIO SENZA BARRE DI SCORRIMENTO */}
+          <div
+            className="p-2.5 bg-[#050508] border-b border-white/5 flex gap-2 overflow-x-auto shrink-0"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
             <button
               onClick={() => handleSend('Consigliami il menu perfetto per stasera')}
-              className="px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10 transition"
+              className="px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10 transition"
             >
               🍷 Consigliami Menu
             </button>
             <button
               onClick={() => handleSend('Vorrei prenotare un tavolo')}
-              className="px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap text-black font-extrabold transition shadow-md"
+              className="px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap text-black font-extrabold transition shadow-md"
               style={{ backgroundColor: brandColor }}
             >
               📅 Prenota Tavolo
             </button>
             <button
               onClick={() => handleSend('Avete opzioni senza glutine o celiachia?')}
-              className="px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10 transition"
+              className="px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10 transition"
             >
               🌾 Allergeni
             </button>
           </div>
 
-          {/* MESSAGGI CHAT */}
+          {/* MESSAGGI CHAT CON FORMATTAZIONE LINK TELEFONO/WHATSAPP */}
           <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-[#030306]">
             {messages.map((m, idx) => (
               <div
@@ -205,7 +212,7 @@ export default function NexusWidget({
                 }`}
               >
                 <div
-                  className={`max-w-[85%] p-3.5 rounded-2xl text-xs md:text-sm leading-relaxed ${
+                  className={`max-w-[88%] p-3.5 rounded-2xl text-xs md:text-sm leading-relaxed ${
                     m.sender === 'user'
                       ? 'text-black font-extrabold rounded-br-none'
                       : 'bg-[#12121c] text-gray-100 border border-white/10 rounded-bl-none'
@@ -216,7 +223,8 @@ export default function NexusWidget({
                   dangerouslySetInnerHTML={{
                     __html: m.text
                       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                      .replace(/\n/g, '<br/>'),
+                      .replace(/\n/g, '<br/>')
+                      .replace(/(\d{4,12})/g, '<a href="tel:$1" style="text-decoration:underline; font-weight:bold; color:#38bdf8;">$1</a>'),
                   }}
                 />
               </div>

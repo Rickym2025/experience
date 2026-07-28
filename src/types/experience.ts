@@ -10,6 +10,13 @@ export interface TasteExperience {
   phone_number?: string;
   address?: string;
   nexus_bot_id?: string;
+  owner_name?: string;
+  owner_email?: string;
+  google_rating?: number;
+  google_reviews_count?: number;
+  font_style?: string;
+  bg_style?: string;
+  button_style?: string;
   vibe_videos?: {
     id: string;
     title: string;
@@ -28,7 +35,7 @@ export interface MenuItem {
   descrizione?: string;
   foto_url?: string;
   allergeni?: string[];
-  occasioni?: string[]; // es: ["romantica", "pesce", "veloce"]
+  occasioni?: string[];
   storytelling?: string;
   pairing_vino?: string;
 }

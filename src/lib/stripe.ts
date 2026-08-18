@@ -3,8 +3,8 @@
  * RM Studio Universal Engine
  */
 export async function avviaCheckoutExperience(
-  slug: string,
-  nomeRistorante: string,
+  slug: string = "nuovo_ristorante",
+  nomeRistorante: string = "Nuovo Ristorante",
   ownerEmail?: string
 ) {
   const origin = typeof window !== "undefined" ? window.location.origin : "https://experience.rmstudio.app";
@@ -20,7 +20,7 @@ export async function avviaCheckoutExperience(
     project_id: slug,
     origin: origin,
     success_url: `${origin}/${slug}?success=true`,
-    cancel_url: `${origin}/${slug}`
+    cancel_url: `${origin}/#pricing`
   };
 
   try {

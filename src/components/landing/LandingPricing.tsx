@@ -5,15 +5,15 @@ import { CheckCircle2, Sparkles } from "lucide-react";
 import { avviaCheckoutExperience, getLivePriceExperience } from "@/lib/stripe";
 
 export default function LandingPricing() {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
   const [livePrice, setLivePrice] = useState<number>(390);
 
-  // Scarica il prezzo aggiornato da Supabase all'apertura
+  // Scarica il prezzo aggiornato da Supabase S2 all'avvio (Zero Flicker con fallback a 390)
   useEffect(() => {
-    getLivePriceExperience(390).then(price => setLivePrice(price));
+    getLivePriceExperience(390).then((price: number) => setLivePrice(price));
   }, []);
 
-  const handleUnlock = async () => {
+  const handleUnlock = async (): Promise<void> => {
     setLoading(true);
     await avviaCheckoutExperience("nuovo_ristorante", "Nuovo Ristorante", undefined, livePrice);
     setLoading(false);

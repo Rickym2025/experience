@@ -1,18 +1,27 @@
+import React from "react";
+import LandingNavbar from "@/components/landing/LandingNavbar";
+import LandingHero from "@/components/landing/LandingHero";
+import ExperienceFeatures from "@/components/landing/ExperienceFeatures";
+import LandingPricing from "@/components/landing/LandingPricing";
+import LandingFaq from "@/components/landing/LandingFaq";
+import LandingOrbit from "@/components/landing/LandingOrbit";
+import LandingFooter from "@/components/landing/LandingFooter";
+
+export const metadata = {
+  title: "Experience Engine | Smart Menu Interattivo & Storytelling per Ristoranti",
+  description: "Trasforma il tuo menu in una narrazione sensoriale con abbinamenti vino guidati, video dell'atmosfera e sommelier AI. Sblocca il tuo locale a €390 una tantum."
+};
+
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-[#050508] text-white flex flex-col items-center justify-center p-6 text-center font-sans">
-      <h1 className="text-3xl font-black mb-2">RM Studio Experience Engine</h1>
-      <p className="text-xs text-gray-400 max-w-md mb-6">Piattaforma di Smart Experience per Ristoranti e Attività Locali.</p>
-
-      {/* 🚀 LINK AL BLOG EXPERIENCE */}
-      <a 
-        href="https://blogs.rmstudio.app/experience/" 
-        target="_blank" 
-        rel="noopener noreferrer"
-        className="px-5 py-2.5 rounded-full bg-teal-500/10 border border-teal-500/30 text-teal-400 font-bold text-xs hover:bg-teal-500/20 transition-all flex items-center gap-2"
-      >
-        <span>📖</span> Esplora il Blog Horeca & Ristorazione
-      </a>
+    <div className="min-h-screen bg-[#050508] text-stone-100 font-sans selection:bg-amber-500 selection:text-black overflow-x-hidden relative">
+      <LandingNavbar />
+      <LandingHero />
+      <ExperienceFeatures />
+      <LandingPricing />
+      <LandingFaq />
+      <LandingOrbit />
+      <LandingFooter />
     </div>
   );
 }

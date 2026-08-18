@@ -1,4 +1,5 @@
 import React from "react";
+import type { Metadata } from "next";
 import LandingNavbar from "@/components/landing/LandingNavbar";
 import LandingHero from "@/components/landing/LandingHero";
 import ExperienceFeatures from "@/components/landing/ExperienceFeatures";
@@ -7,9 +8,9 @@ import LandingFaq from "@/components/landing/LandingFaq";
 import LandingOrbit from "@/components/landing/LandingOrbit";
 import LandingFooter from "@/components/landing/LandingFooter";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Experience Engine | Smart Menu Interattivo & Storytelling per Ristoranti",
-  description: "Trasforma il tuo menu in una narrazione sensoriale con abbinamenti vino guidati, video dell'atmosfera e sommelier AI. Sblocca il tuo locale a €390 una tantum."
+  description: "Trasforma il tuo menu in una narrazione sensoriale con abbinamenti vino guidati, video dell'atmosfera e sommelier AI. Sblocca il tuo portale definitivo una tantum senza canoni mensili."
 };
 
 export default function HomePage() {

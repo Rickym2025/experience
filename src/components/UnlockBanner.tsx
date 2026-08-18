@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { avviaCheckoutExperience } from "@/lib/stripe";
+import React, { useState, useEffect } from "react";
+import { avviaCheckoutExperience, getLivePriceExperience } from "@/lib/stripe";
 
 interface UnlockBannerProps {
   slug: string;
@@ -18,13 +18,17 @@ export default function UnlockBanner({
 }: UnlockBannerProps) {
   const [loading, setLoading] = useState(false);
   const [minimized, setMinimized] = useState(false);
+  const [livePrice, setLivePrice] = useState<number>(390);
 
-  // Se il sito è già pagato, non mostrare il banner
+  useEffect(() => {
+    getLivePriceExperience(390).then(p => setLivePrice(p));
+  }, []);
+
   if (isPaid) return null;
 
   const handleUnlock = async () => {
     setLoading(true);
-    await avviaCheckoutExperience(slug, nomeRistorante, ownerEmail);
+    await avviaCheckoutExperience(slug, nomeRistorante, ownerEmail, livePrice);
     setLoading(false);
   };
 
@@ -41,7 +45,7 @@ export default function UnlockBanner({
                 </span>
               </div>
               <p className="text-xs text-stone-300 font-medium">
-                Sblocca il portale per <strong>{nomeRistorante}</strong> (Dominio, QR & Hosting inclusi).
+                Sblocca il portale per <strong>{nomeRistorante}</strong>.
               </p>
             </div>
 
@@ -51,7 +55,7 @@ export default function UnlockBanner({
                 disabled={loading}
                 className="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-black font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all shadow-md shadow-amber-500/20 whitespace-nowrap cursor-pointer disabled:opacity-50"
               >
-                {loading ? "Apertura..." : "Sblocca a €390 🚀"}
+                {loading ? "Apertura..." : `Sblocca a €${livePrice} 🚀`}
               </button>
               <button
                 onClick={() => setMinimized(true)}
@@ -67,7 +71,7 @@ export default function UnlockBanner({
             onClick={() => setMinimized(false)}
             className="w-full text-center text-xs font-bold text-amber-400 hover:underline cursor-pointer"
           >
-            🔒 Sblocca Smart Menu Definitivo (€390)
+            🔒 Sblocca Smart Menu Definitivo (€{livePrice})
           </button>
         )}
       </div>

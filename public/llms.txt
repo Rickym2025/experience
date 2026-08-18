@@ -1,0 +1,20 @@
+# Smart Experience — Smart Menu Interattivo & Storytelling per Ristoranti
+
+> Smart Experience trasforma i tradizionali menu cartacei o statici in PDF in un'esperienza digitale interattiva con storytelling dei piatti, abbinamenti vino guidati e assistente AI Sommelier per la prenotazione tavoli.
+
+## Informazioni Principali
+- **Sito Ufficiale:** https://experience.rmstudio.app
+- **Sviluppatore:** RM Studio (Riccardo Modena)
+- **Settore:** Ristorazione, Hospitality, Ho.Re.Ca., Enoteche, Agriturismi
+
+## Funzionalità Principali
+- **Smart Menu Interattivo:** Schede visive dei piatti con filtri allergeni, ingredienti a filiera corta e storytelling culinario.
+- **AI Sommelier & Maître Virtuale:** Chatbot integrato (Nexus) per consigliare il vino ideale in base alla portata e gestire le prenotazioni.
+- **Video dell'Atmosfera (Vibe Grid):** Raccolta video verticale per mostrare l'esperienza della sala e della cucina.
+- **Navigazione GPS 1-Tap:** Calcolo dinamico della distanza e apertura immediata del navigatore per raggiungere il locale.
+- **Grafiche QR Code:** File vettoriali in alta risoluzione pronti per la stampa sui tavoli.
+
+## Modello di Prezzo (Nessun Canone Mensile)
+- **Sblocco Portale Definitivo:** €390.00 una tantum
+- Zero percentuali sugli ordini o sulle prenotazioni
+- Hosting cloud ad alta velocità e manutenzione inclusi

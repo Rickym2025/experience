@@ -23,8 +23,8 @@ export default function LandingNavbar() {
           <a href="https://blogs.rmstudio.app/experience/" target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:text-white transition hidden sm:inline">
             Blog Horeca
           </a>
-          <a href="#pricing" className="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-black px-5 py-2 rounded-full transition shadow-lg shadow-amber-500/20 uppercase tracking-wider">
-            Sblocca a €390
+          <a href="#pricing" className="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-black px-5 py-2 rounded-full transition shadow-lg shadow-amber-500/20 uppercase tracking-wider text-xs font-bold">
+              Sblocca Locale 🚀
           </a>
         </div>
       </div>

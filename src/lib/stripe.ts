@@ -1,19 +1,48 @@
 /**
- * Experience Engine - Stripe On-The-Fly Checkout
+ * Experience Engine - Live Pricing & Stripe On-The-Fly Checkout
  * RM Studio Universal Engine
  */
+const SUPABASE_S2_URL = "https://jhijfulhntlhcytbhcly.supabase.co";
+const SUPABASE_S2_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpoaWpmdWxobnRsaGN5dGJoY2x5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MzcxODcsImV4cCI6MjA5ODMxMzE4N30.z062NW4ApClll-XWHH2ufmcCleBRNHUUdKO6FiLa0TQ";
+
+// ⚡ Recupera il prezzo aggiornato in tempo reale da saas_pricing
+export async function getLivePriceExperience(fallbackPrice: number = 390): Promise<number> {
+  try {
+    const res = await fetch(`${SUPABASE_S2_URL}/rest/v1/saas_pricing?saas=eq.experience&plan_id=eq.sblocco&select=price`, {
+      headers: {
+        'apikey': SUPABASE_S2_KEY,
+        'Authorization': `Bearer ${SUPABASE_S2_KEY}`
+      },
+      cache: 'no-store'
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0 && data[0].price) {
+        return Number(data[0].price);
+      }
+    }
+  } catch (e) {
+    console.warn("Utilizzo fallback price Experience:", e);
+  }
+  return fallbackPrice;
+}
+
 export async function avviaCheckoutExperience(
   slug: string = "nuovo_ristorante",
   nomeRistorante: string = "Nuovo Ristorante",
-  ownerEmail?: string
+  ownerEmail?: string,
+  priceOverride?: number
 ) {
   const origin = typeof window !== "undefined" ? window.location.origin : "https://experience.rmstudio.app";
+  
+  // Se non passato, preleva il prezzo live dal database
+  const finalPrice = priceOverride || await getLivePriceExperience(390);
 
   const payload = {
     progetto: "Experience",
     portal_type: "experience",
     title: `Sblocco Smart Menu • ${nomeRistorante}`,
-    price: 390,
+    price: finalPrice,
     ricarica_tipo: "sblocco",
     email: ownerEmail || undefined,
     agency_id: slug,
@@ -30,7 +59,7 @@ export async function avviaCheckoutExperience(
       body: JSON.stringify(payload)
     });
 
-    if (!res.ok) throw new Error("Errore creazione sessione Stripe");
+    if (!res.ok) throw new Error("Errore sessione");
     const data = await res.json();
     const redirectUrl = data.url || data.checkout_url || data.session_url;
 

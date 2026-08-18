@@ -5,44 +5,36 @@ import { ChevronDown, HelpCircle } from "lucide-react";
 
 const FAQS = [
   {
-    q: "Come visualizzano il menu i clienti del ristorante?",
-    a: "Il cliente inquadra il QR Code sul tavolo con la fotocamera del proprio smartphone. Il menu si apre istantaneamente nel browser senza richiedere l'installazione di alcuna applicazione."
+    q: "Come visualizzano il menu i clienti del mio ristorante?",
+    a: "Il cliente inquadra il QR Code sul tavolo con la normale fotocamera del suo smartphone. Il menu si apre istantaneamente nel browser, veloce come un sito web, senza costringerlo a scaricare nessuna applicazione."
   },
   {
-    q: "Come modifico piatti, prezzi e disponibilità?",
-    a: "Attraverso il pannello gestionale puoi aggiornare piatti, prezzi del giorno, allergeni e abbinamenti vino in tempo reale: i tavoli vedranno subito le modifiche."
+    q: "Cosa succede se finisce un ingrediente o voglio cambiare un prezzo?",
+    a: "Hai un pannello di controllo semplicissimo: puoi nascondere un piatto esaurito o aggiornare i prezzi del giorno in 10 secondi. Tutti i tavoli vedranno all'istante il menu aggiornato."
   },
   {
-    q: "Cosa succede dopo il pagamento dei 390€?",
-    a: "I nostri server attivano la licenza definitiva, rimuovono i banner di anteprima e procedono alla registrazione/puntamento del tuo dominio personalizzato con certificato SSL incluso."
+    q: "Come fa il menu ad aumentare gli ordini di vino?",
+    a: "Per ogni piatto puoi impostare un vino abbinato (es. 'Consigliato con calice di Nebbiolo 6€'). Il cliente lo vede direttamente sotto il piatto e lo ordina spontaneamente."
   },
   {
-    q: "Come funziona la sezione Vibe Grid per l'atmosfera?",
-    a: "Puoi caricare brevi video verticali in stile reel per mostrare i piatti serviti al tavolo, i cocktail in preparazione o l'atmosfera delle serate con musica dal vivo."
+    q: "Come risponde l'assistente AI agli ospiti con allergie o intolleranze?",
+    a: "L'assistente virtuale legge la lista degli ingredienti e degli allergeni inseriti nel database: se un cliente chiede 'Quali piatti sono senza glutine?', l'AI mostra solo le portate sicure."
   },
   {
-    q: "L'assistente virtuale Nexus AI sa rispondere agli allergeni?",
-    a: "Sì. Nexus AI analizza gli ingredienti inseriti in scheda e risponde con precisione agli ospiti celiaci, vegani o con specifiche intolleranze alimentari."
+    q: "Cosa ricevo dopo aver pagato i 390€?",
+    a: "Attiviamo il tuo sito definitivo, colleghiamo il tuo dominio personalizzato (es: menu.nomeosteria.it), impostiamo il certificato di sicurezza SSL e ti inviamo i file grafici del QR Code da stampare per i tavoli."
   },
   {
-    q: "Posso stampare il QR Code sui miei sottobicchieri o cavalieri da tavolo?",
-    a: "Certamente. Dalla dashboard puoi scaricare il QR Code vettoriale in alta risoluzione per stamparlo su qualsiasi supporto tipografico."
+    q: "Ci sono canoni mensili nascosti da pagare ogni mese?",
+    a: "No, a differenza della concorrenza che richiede abbonamenti mensili di 30-50€, Experience si paga una sola volta per la licenza e l'attivazione iniziale."
   },
   {
-    q: "Ci sono canoni mensili o costi ricorrenti nascosti?",
-    a: "Nessun canone mensile obbligatorio. Lo sblocco iniziale di 390€ include il primo anno di hosting e dominio. I rinnovi infrastrutturali annuali rimangono a tariffa fissa minima."
+    q: "Posso inserire anche il link per prenotare i tavoli o le recensioni Google?",
+    a: "Sì, in cima alla pagina del tuo menu ci sono i pulsanti diretti per prenotare il tavolo (tramite il tuo link o WhatsApp) e per lasciare una recensione a 5 stelle su Google Maps."
   },
   {
-    q: "Il menu supporta lingue straniere per i turisti?",
-    a: "Sì, l'assistente Nexus AI e l'interfaccia si adattano automaticamente alla lingua del turista (Inglese, Tedesco, Francese, Spagnolo e altre 6 lingue)."
-  },
-  {
-    q: "Come collego il pulsante per le prenotazioni su Google o TheFork?",
-    a: "Nel pannello ti basta inserire il link della tua piattaforma di booking o il numero WhatsApp del locale: il pulsante di prenotazione sarà visibile in cima al menu."
-  },
-  {
-    q: "Come posso testare un'anteprima gratuita prima di pagare?",
-    a: "Contatta il nostro lab: genereremo un'anteprima interattiva del tuo locale per farti toccare con mano l'esperienza prima dello sblocco."
+    q: "Come funzionano i video dell'atmosfera nel menu?",
+    a: "Puoi caricare brevi video verticali (stile Instagram) che mostrano la carne sulla brace, la pizza in forno o la sala del locale, dando subito un senso di qualità e calore."
   }
 ];
 
@@ -56,7 +48,7 @@ export default function LandingFaq() {
           <HelpCircle size={14} /> Domande Frequenti
         </div>
         <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight">
-          Tutto ciò che c&apos;è da sapere
+          Tutto quello che c&apos;è da sapere
         </h2>
       </div>
 

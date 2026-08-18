@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+# Protezione rotte API e webhook privati
+Disallow: /api/
+
+Sitemap: https://experience.rmstudio.app/sitemap.xml

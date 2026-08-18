@@ -17,6 +17,7 @@ export interface TasteExperience {
   font_style?: string;
   bg_style?: string;
   button_style?: string;
+  is_paid?: boolean;
   vibe_videos?: {
     id: string;
     title: string;

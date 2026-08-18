@@ -4,6 +4,7 @@ import HeroExperience from '@/components/HeroExperience';
 import InteractiveMenu from '@/components/InteractiveMenu';
 import VibeGrid from '@/components/VibeGrid';
 import NexusWidget from '@/components/NexusWidget';
+import UnlockBanner from '@/components/UnlockBanner';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -41,7 +42,6 @@ export default async function ExperiencePage({ params }: PageProps) {
   };
   const items = (menuItems || []) as MenuItem[];
 
-  // Classi dinamiche per il Brand
   const fontClass =
     expData.font_style === 'serif'
       ? 'font-serif'
@@ -57,7 +57,7 @@ export default async function ExperiencePage({ params }: PageProps) {
       : 'bg-[#050508] text-gray-100';
 
   return (
-    <main className={`min-h-screen ${bgClass} ${fontClass} selection:bg-amber-500 selection:text-black`}>
+    <main className={`min-h-screen ${bgClass} ${fontClass} selection:bg-amber-500 selection:text-black pb-24`}>
       <HeroExperience experience={expData} />
 
       <div className="max-w-5xl mx-auto px-4 py-8">
@@ -67,7 +67,7 @@ export default async function ExperiencePage({ params }: PageProps) {
       {expData.vibe_videos && expData.vibe_videos.length > 0 && (
         <section className="max-w-5xl mx-auto px-4 py-12 border-t border-current/10">
           <h3 className="text-xl font-extrabold mb-6 uppercase tracking-wider flex items-center gap-2">
-            <span>🔥</span> L'Atmosfera del Locale
+            <span>🔥</span> L&apos;Atmosfera del Locale
           </h3>
           <VibeGrid videos={expData.vibe_videos} />
         </section>
@@ -88,6 +88,14 @@ export default async function ExperiencePage({ params }: PageProps) {
           ownerName={expData.owner_name}
         />
       )}
+
+      {/* Banner Sblocco On-The-Fly */}
+      <UnlockBanner
+        slug={expData.slug}
+        nomeRistorante={expData.nome_ristorante}
+        ownerEmail={expData.owner_email}
+        isPaid={expData.is_paid}
+      />
     </main>
   );
 }

@@ -1,10 +1,19 @@
 import React from "react";
+import Image from "next/image";
 
 const InstagramIcon = () => (
-  <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect width="20" height="20" x="2" y="2" rx="5" ry="5" /><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" /></svg>
+  <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+  </svg>
 );
+
 const LinkedinIcon = () => (
-  <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" /><rect width="4" height="12" x="2" y="9" /><circle cx="4" cy="4" r="2" /></svg>
+  <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
+    <rect width="4" height="12" x="2" y="9" />
+    <circle cx="4" cy="4" r="2" />
+  </svg>
 );
 
 export default function LandingFooter() {
@@ -13,8 +22,14 @@ export default function LandingFooter() {
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-10 text-center md:text-left">
         
         <div className="md:col-span-2 space-y-3">
-          <div className="flex items-center justify-center md:justify-start gap-2">
-            <span className="w-3 h-3 rounded-full bg-amber-400 shadow-[0_0_10px_#fbbf24]"></span>
+          <div className="flex items-center justify-center md:justify-start gap-2.5">
+            <Image
+              src="/logo_experience.png"
+              alt="Experience Engine Logo"
+              width={24}
+              height={24}
+              className="w-6 h-6 object-contain rounded opacity-90"
+            />
             <span className="font-extrabold text-white text-base tracking-tight">Experience Engine</span>
           </div>
           <p className="text-stone-400 text-xs leading-relaxed max-w-sm">
@@ -42,8 +57,8 @@ export default function LandingFooter() {
         <div>
           <h4 className="text-white font-bold uppercase tracking-wider mb-3 text-xs">Social Hub</h4>
           <div className="flex justify-center md:justify-start gap-3">
-            <a href="https://www.instagram.com/riccardo_mode_/" target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-lg bg-stone-900 border border-stone-800 flex items-center justify-center hover:text-amber-400 transition"><InstagramIcon /></a>
-            <a href="https://www.linkedin.com/in/riccardo-modena-13918a61/" target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-lg bg-stone-900 border border-stone-800 flex items-center justify-center hover:text-amber-400 transition"><LinkedinIcon /></a>
+            <a href="https://www.instagram.com/riccardo_mode_/" target="_blank" rel="noopener noreferrer" aria-label="Instagram RM Studio" className="w-8 h-8 rounded-lg bg-stone-900 border border-stone-800 flex items-center justify-center hover:text-amber-400 transition"><InstagramIcon /></a>
+            <a href="https://www.linkedin.com/in/riccardo-modena-13918a61/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn RM Studio" className="w-8 h-8 rounded-lg bg-stone-900 border border-stone-800 flex items-center justify-center hover:text-amber-400 transition"><LinkedinIcon /></a>
           </div>
         </div>
 

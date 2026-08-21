@@ -10,7 +10,24 @@ import LandingFooter from "@/components/landing/LandingFooter";
 
 export const metadata: Metadata = {
   title: "Experience Engine | Smart Menu Interattivo & Storytelling per Ristoranti",
-  description: "Trasforma il tuo menu in una narrazione sensoriale con abbinamenti vino guidati, video dell'atmosfera e sommelier AI. Sblocca il tuo portale definitivo una tantum senza canoni mensili."
+  description: "Trasforma il tuo menu in una narrazione sensoriale con abbinamenti vino guidati, video dell'atmosfera e sommelier AI. Sblocca il tuo portale definitivo una tantum senza canoni mensili.",
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/logo_experience.png",
+  },
+  openGraph: {
+    title: "Experience Engine | Smart Menu Interattivo",
+    description: "La piattaforma interattiva per storytelling e vendita al tavolo nel settore ristorazione.",
+    images: [
+      {
+        url: "/logo_experience.png",
+        width: 800,
+        height: 800,
+        alt: "Experience Engine Logo",
+      },
+    ],
+  },
 };
 
 export default function HomePage() {

@@ -5,6 +5,11 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'Experience Engine | RM Studio',
   description: 'Smart Experience Page per Ristoranti e Attività Locali',
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+    apple: '/logo_experience.png',
+  },
 };
 
 export default function RootLayout({

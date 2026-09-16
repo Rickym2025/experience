@@ -34,15 +34,15 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-[#050508] text-stone-100 font-sans selection:bg-amber-500 selection:text-black overflow-x-hidden relative">
       
-      {/* ─── SFONDO ATMOSFERICO RISTORANTE (COMPATIBILE SERVER COMPONENT) ─── */}
+      {/* ─── SFONDO ATMOSFERICO RISTORANTE (CALIBRATO PIÙ LUMINOSO) ─── */}
       <div 
-        className="fixed inset-0 z-0 pointer-events-none bg-cover bg-center opacity-25 filter brightness-75 scale-105"
+        className="fixed inset-0 z-0 pointer-events-none bg-cover bg-center opacity-55 scale-105"
         style={{
           backgroundImage: "url('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=2000&q=80')"
         }}
       />
-      {/* Doppia sfumatura scura per mantenere perfetto il contrasto del testo */}
-      <div className="fixed inset-0 z-0 pointer-events-none bg-gradient-to-b from-[#050508]/85 via-[#050508]/90 to-[#050508]" />
+      {/* Velo scuro alleggerito (40%-70%) per far risaltare foto e calici mantenendo il testo leggibile */}
+      <div className="fixed inset-0 z-0 pointer-events-none bg-gradient-to-b from-[#050508]/40 via-[#050508]/65 to-[#050508]" />
 
       {/* ─── CONTENUTO PRINCIPALE (Z-10) ─── */}
       <div className="relative z-10">

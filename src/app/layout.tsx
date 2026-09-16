@@ -39,6 +39,9 @@ export default function RootLayout({
 
         {/* 2. BANNER COOKIE RM STUDIO */}
         <Script src="https://rmstudio.app/cookie-banner.js" strategy="afterInteractive" />
+
+        {/* 3. SELETTORE LINGUE UNIVERSALE RM STUDIO */}
+        <Script src="https://rmstudio.app/translate.js" strategy="afterInteractive" />
       </body>
     </html>
   );

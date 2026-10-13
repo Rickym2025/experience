@@ -1,20 +1,25 @@
 /**
- * Experience Engine - Live Pricing & Stripe On-The-Fly Checkout
+ * Experience Engine - Live Dynamic Pricing Engine (Supabase S2) & Stripe Checkout
  * RM Studio Universal Engine
  */
 const SUPABASE_S2_URL = "https://jhijfulhntlhcytbhcly.supabase.co";
 const SUPABASE_S2_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpoaWpmdWxobnRsaGN5dGJoY2x5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MzcxODcsImV4cCI6MjA5ODMxMzE4N30.z062NW4ApClll-XWHH2ufmcCleBRNHUUdKO6FiLa0TQ";
 
-export interface ExperiencePricingData {
-  price: number;
-  name: string;
+export interface ExperiencePrices {
+  basePrice: number;    // Piano Base: Sblocco Portale Smart Menu
+  musicPrice: number;   // Add-On Opzionale: Brano Inedito SIAE (FF Edizioni)
 }
 
-// ⚡ Recupera il prezzo aggiornato in tempo reale da saas_pricing
-export async function getLivePriceExperience(fallbackPrice: number = 390): Promise<number> {
+// ⚡ Recupera i prezzi aggiornati in tempo reale dal database centrale S2 (saas_pricing)
+export async function getLivePricesExperience(): Promise<ExperiencePrices> {
+  const defaults: ExperiencePrices = {
+    basePrice: 390,
+    musicPrice: 250
+  };
+
   try {
     const res = await fetch(
-      `${SUPABASE_S2_URL}/rest/v1/saas_pricing?saas=eq.experience&plan_id=eq.sblocco&select=price,name`,
+      `${SUPABASE_S2_URL}/rest/v1/saas_pricing?saas=eq.experience&select=plan_id,price`,
       {
         headers: {
           apikey: SUPABASE_S2_KEY,
@@ -26,33 +31,49 @@ export async function getLivePriceExperience(fallbackPrice: number = 390): Promi
 
     if (res.ok) {
       const data = await res.json();
-      if (Array.isArray(data) && data.length > 0 && data[0].price !== undefined) {
-        return Number(data[0].price);
+      if (Array.isArray(data)) {
+        data.forEach((item: { plan_id: string; price: number }) => {
+          if (item.plan_id === 'sblocco' && item.price !== undefined) {
+            defaults.basePrice = Number(item.price);
+          }
+          if (item.plan_id === 'brano' && item.price !== undefined) {
+            defaults.musicPrice = Number(item.price);
+          }
+        });
       }
     }
   } catch (e) {
-    console.warn("Utilizzo fallback price Experience:", e);
+    console.warn("Utilizzo prezzi fallback per Experience:", e);
   }
-  return fallbackPrice;
+  return defaults;
 }
 
 export async function avviaCheckoutExperience(
   slug: string = "nuovo_ristorante",
   nomeRistorante: string = "Nuovo Ristorante",
+  includeMusic: boolean = false,
   ownerEmail?: string,
   priceOverride?: number
 ): Promise<void> {
   const origin = typeof window !== "undefined" ? window.location.origin : "https://experience.rmstudio.app";
   
-  // Se non passato, preleva il prezzo live dal database centrale S2
-  const finalPrice = priceOverride !== undefined ? priceOverride : await getLivePriceExperience(390);
+  // Preleva i prezzi correnti se non passati esplicitamente
+  const livePrices = await getLivePricesExperience();
+  const calculatedPrice = priceOverride !== undefined 
+    ? priceOverride 
+    : (livePrices.basePrice + (includeMusic ? livePrices.musicPrice : 0));
+
+  const planType = includeMusic ? "sblocco_con_brano" : "sblocco";
+  const planTitle = includeMusic
+    ? `Smart Menu + Colonna Sonora d'Autore SIAE • ${nomeRistorante}`
+    : `Sblocco Smart Menu & Storytelling • ${nomeRistorante}`;
 
   const payload = {
     progetto: "Experience",
     portal_type: "experience",
-    title: `Sblocco Smart Menu • ${nomeRistorante}`,
-    price: finalPrice,
-    ricarica_tipo: "sblocco",
+    title: planTitle,
+    price: calculatedPrice,
+    ricarica_tipo: planType,
     email: ownerEmail || undefined,
     agency_id: slug,
     project_id: slug,

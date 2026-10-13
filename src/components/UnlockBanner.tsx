@@ -10,6 +10,12 @@ interface UnlockBannerProps {
   isPaid?: boolean;
 }
 
+const SUPERADMIN_EMAILS = [
+  "modena.riccardo@gmail.com",
+  "riccardo@rmstudio.app",
+  "info@rmstudio.app"
+];
+
 export default function UnlockBanner({
   slug,
   nomeRistorante,
@@ -24,7 +30,8 @@ export default function UnlockBanner({
     getLivePriceExperience(390).then(p => setLivePrice(p));
   }, []);
 
-  if (isPaid) return null;
+  const isOwnerAdmin = !!ownerEmail && SUPERADMIN_EMAILS.includes(ownerEmail.toLowerCase().trim());
+  if (isPaid || isOwnerAdmin) return null;
 
   const handleUnlock = async () => {
     setLoading(true);

@@ -10,7 +10,13 @@ export interface ExperiencePrices {
   musicPrice: number;   // Add-On Opzionale: Brano Inedito SIAE (FF Edizioni)
 }
 
-// ⚡ Recupera i prezzi aggiornati in tempo reale dal database centrale S2 (saas_pricing)
+// Retrocompatibilità per interfacce esistenti
+export interface ExperiencePricingData {
+  price: number;
+  name: string;
+}
+
+// ⚡ Recupera entrambi i prezzi (base + musica) dal database centrale S2
 export async function getLivePricesExperience(): Promise<ExperiencePrices> {
   const defaults: ExperiencePrices = {
     basePrice: 390,
@@ -48,20 +54,41 @@ export async function getLivePricesExperience(): Promise<ExperiencePrices> {
   return defaults;
 }
 
+// ⚡ Export retrocompatibile al singolare (usato da UnlockBanner.tsx)
+export async function getLivePriceExperience(fallbackPrice: number = 390): Promise<number> {
+  const prices = await getLivePricesExperience();
+  return prices.basePrice || fallbackPrice;
+}
+
+// ⚡ Checkout flessibile: supporta sia le chiamate da UnlockBanner sia quelle con il brano opzionale da LandingPricing
 export async function avviaCheckoutExperience(
   slug: string = "nuovo_ristorante",
   nomeRistorante: string = "Nuovo Ristorante",
-  includeMusic: boolean = false,
-  ownerEmail?: string,
+  includeMusicOrEmail?: boolean | string,
+  ownerEmailOrPrice?: string | number,
   priceOverride?: number
 ): Promise<void> {
   const origin = typeof window !== "undefined" ? window.location.origin : "https://experience.rmstudio.app";
-  
-  // Preleva i prezzi correnti se non passati esplicitamente
   const livePrices = await getLivePricesExperience();
-  const calculatedPrice = priceOverride !== undefined 
-    ? priceOverride 
-    : (livePrices.basePrice + (includeMusic ? livePrices.musicPrice : 0));
+
+  let includeMusic = false;
+  let ownerEmail: string | undefined = undefined;
+  let finalPrice: number = livePrices.basePrice;
+
+  // Gestione parametri polimorfica per supportare sia la vecchia che la nuova firma
+  if (typeof includeMusicOrEmail === "string") {
+    // Chiamata vecchio stile: (slug, nome, ownerEmail, priceOverride)
+    ownerEmail = includeMusicOrEmail;
+    includeMusic = false;
+    finalPrice = typeof ownerEmailOrPrice === "number" ? ownerEmailOrPrice : livePrices.basePrice;
+  } else {
+    // Chiamata nuovo stile con add-on musica: (slug, nome, includeMusic, ownerEmail, priceOverride)
+    includeMusic = Boolean(includeMusicOrEmail);
+    ownerEmail = typeof ownerEmailOrPrice === "string" ? ownerEmailOrPrice : undefined;
+    finalPrice = priceOverride !== undefined 
+      ? priceOverride 
+      : (livePrices.basePrice + (includeMusic ? livePrices.musicPrice : 0));
+  }
 
   const planType = includeMusic ? "sblocco_con_brano" : "sblocco";
   const planTitle = includeMusic
@@ -72,7 +99,7 @@ export async function avviaCheckoutExperience(
     progetto: "Experience",
     portal_type: "experience",
     title: planTitle,
-    price: calculatedPrice,
+    price: finalPrice,
     ricarica_tipo: planType,
     email: ownerEmail || undefined,
     agency_id: slug,

@@ -5,6 +5,7 @@ import InteractiveMenu from '@/components/InteractiveMenu';
 import VibeGrid from '@/components/VibeGrid';
 import NexusWidget from '@/components/NexusWidget';
 import UnlockBanner from '@/components/UnlockBanner';
+import PrivilegeClubModal from '@/components/PrivilegeClubModal';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -25,7 +26,7 @@ export default async function ExperiencePage({ params }: PageProps) {
   if (!experience) {
     return (
       <div className="min-h-screen bg-[#050508] text-white flex items-center justify-center font-sans">
-        <p className="text-sm font-bold">Ristorante non trovato.</p>
+        <p className="text-sm font-bold">Ristorante o Tenuta non trovata.</p>
       </div>
     );
   }
@@ -39,6 +40,8 @@ export default async function ExperiencePage({ params }: PageProps) {
   const expData = experience as TasteExperience & {
     font_style?: string;
     bg_style?: string;
+    google_maps_url?: string;
+    phone_number?: string;
   };
   const items = (menuItems || []) as MenuItem[];
 
@@ -57,13 +60,16 @@ export default async function ExperiencePage({ params }: PageProps) {
       : 'bg-[#050508] text-gray-100';
 
   return (
-    <main className={`min-h-screen ${bgClass} ${fontClass} selection:bg-amber-500 selection:text-black pb-24`}>
+    <main className={`min-h-screen ${bgClass} ${fontClass} selection:bg-amber-500 selection:text-black pb-24 relative`}>
+      {/* Hero Multimediale */}
       <HeroExperience experience={expData} />
 
+      {/* Menu e Carta dei Vini Interattiva con Abbinamenti */}
       <div className="max-w-5xl mx-auto px-4 py-8">
         <InteractiveMenu items={items} brandColor={expData.brand_color} />
       </div>
 
+      {/* Vibe Video dell'Atmosfera in Sala e Cantina */}
       {expData.vibe_videos && expData.vibe_videos.length > 0 && (
         <section className="max-w-5xl mx-auto px-4 py-12 border-t border-current/10">
           <h3 className="text-xl font-extrabold mb-6 uppercase tracking-wider flex items-center gap-2">
@@ -73,12 +79,14 @@ export default async function ExperiencePage({ params }: PageProps) {
         </section>
       )}
 
+      {/* Footer Locale White-Label */}
       <footer className="border-t border-current/10 py-10 text-center text-xs opacity-60">
         <p className="font-bold">{expData.nome_ristorante}</p>
         {expData.address && <p className="mt-1">{expData.address}</p>}
         <p className="mt-4 text-[10px] opacity-50">Powered by RM Studio Experience Engine</p>
       </footer>
 
+      {/* Maître Virtuale & Sommelier AI Nexus */}
       {expData.nexus_bot_id && (
         <NexusWidget
           botId={expData.nexus_bot_id}
@@ -89,7 +97,16 @@ export default async function ExperiencePage({ params }: PageProps) {
         />
       )}
 
-      {/* Banner Sblocco On-The-Fly */}
+      {/* Circolo Privato & Omaggio del Sommelier + Scudo Recensioni */}
+      <PrivilegeClubModal
+        slug={expData.slug}
+        nomeRistorante={expData.nome_ristorante}
+        googleMapsUrl={expData.google_maps_url}
+        ownerPhone={expData.phone_number}
+        brandColor={expData.brand_color}
+      />
+
+      {/* Banner Sblocco On-The-Fly per Proposta Commerciale */}
       <UnlockBanner
         slug={expData.slug}
         nomeRistorante={expData.nome_ristorante}

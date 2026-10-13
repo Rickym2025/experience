@@ -5,22 +5,20 @@
 const SUPABASE_S2_URL = "https://jhijfulhntlhcytbhcly.supabase.co";
 const SUPABASE_S2_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpoaWpmdWxobnRsaGN5dGJoY2x5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MzcxODcsImV4cCI6MjA5ODMxMzE4N30.z062NW4ApClll-XWHH2ufmcCleBRNHUUdKO6FiLa0TQ";
 
-export interface ExperiencePrices {
-  basePrice: number;    // Piano Base: Sblocco Portale Smart Menu
-  musicPrice: number;   // Add-On Opzionale: Brano Inedito SIAE (FF Edizioni)
+export interface ExperienceTierPrices {
+  starter: number; // Tier 1: Carta Base
+  pro: number;     // Tier 2: Signature Experience (Il più conveniente)
+  royal: number;   // Tier 3: Royal + Colonna Sonora SIAE FF Edizioni
+  musicAddon: number; // Brano singolo SIAE
 }
 
-// Retrocompatibilità per interfacce esistenti
-export interface ExperiencePricingData {
-  price: number;
-  name: string;
-}
-
-// ⚡ Recupera entrambi i prezzi (base + musica) dal database centrale S2
-export async function getLivePricesExperience(): Promise<ExperiencePrices> {
-  const defaults: ExperiencePrices = {
-    basePrice: 390,
-    musicPrice: 250
+// ⚡ Recupera i 3 prezzi aggiornati in tempo reale da Supabase S2 (saas_pricing)
+export async function getLiveTiersExperience(): Promise<ExperienceTierPrices> {
+  const defaults: ExperienceTierPrices = {
+    starter: 190,
+    pro: 390,
+    royal: 690,
+    musicAddon: 300
   };
 
   try {
@@ -39,68 +37,53 @@ export async function getLivePricesExperience(): Promise<ExperiencePrices> {
       const data = await res.json();
       if (Array.isArray(data)) {
         data.forEach((item: { plan_id: string; price: number }) => {
-          if (item.plan_id === 'sblocco' && item.price !== undefined) {
-            defaults.basePrice = Number(item.price);
-          }
-          if (item.plan_id === 'brano' && item.price !== undefined) {
-            defaults.musicPrice = Number(item.price);
-          }
+          if (item.plan_id === 'starter' && item.price !== undefined) defaults.starter = Number(item.price);
+          if ((item.plan_id === 'sblocco' || item.plan_id === 'pro') && item.price !== undefined) defaults.pro = Number(item.price);
+          if (item.plan_id === 'royal' && item.price !== undefined) defaults.royal = Number(item.price);
+          if (item.plan_id === 'brano' && item.price !== undefined) defaults.musicAddon = Number(item.price);
         });
       }
     }
   } catch (e) {
-    console.warn("Utilizzo prezzi fallback per Experience:", e);
+    console.warn("Utilizzo prezzi fallback Experience:", e);
   }
   return defaults;
 }
 
-// ⚡ Export retrocompatibile al singolare (usato da UnlockBanner.tsx)
+// Retrocompatibilità per UnlockBanner.tsx
 export async function getLivePriceExperience(fallbackPrice: number = 390): Promise<number> {
-  const prices = await getLivePricesExperience();
-  return prices.basePrice || fallbackPrice;
+  const tiers = await getLiveTiersExperience();
+  return tiers.pro || fallbackPrice;
 }
 
-// ⚡ Checkout flessibile: supporta sia le chiamate da UnlockBanner sia quelle con il brano opzionale da LandingPricing
-export async function avviaCheckoutExperience(
+// Checkout universale on-the-fly per n8n Stripe
+export async function avviaCheckoutTierExperience(
+  planId: 'starter' | 'pro' | 'royal',
   slug: string = "nuovo_ristorante",
   nomeRistorante: string = "Nuovo Ristorante",
-  includeMusicOrEmail?: boolean | string,
-  ownerEmailOrPrice?: string | number,
+  ownerEmail?: string,
   priceOverride?: number
 ): Promise<void> {
   const origin = typeof window !== "undefined" ? window.location.origin : "https://experience.rmstudio.app";
-  const livePrices = await getLivePricesExperience();
+  const liveTiers = await getLiveTiersExperience();
 
-  let includeMusic = false;
-  let ownerEmail: string | undefined = undefined;
-  let finalPrice: number = livePrices.basePrice;
+  let finalPrice = priceOverride !== undefined ? priceOverride : liveTiers.pro;
+  let planTitle = `Signature Experience • ${nomeRistorante}`;
 
-  // Gestione parametri polimorfica per supportare sia la vecchia che la nuova firma
-  if (typeof includeMusicOrEmail === "string") {
-    // Chiamata vecchio stile: (slug, nome, ownerEmail, priceOverride)
-    ownerEmail = includeMusicOrEmail;
-    includeMusic = false;
-    finalPrice = typeof ownerEmailOrPrice === "number" ? ownerEmailOrPrice : livePrices.basePrice;
-  } else {
-    // Chiamata nuovo stile con add-on musica: (slug, nome, includeMusic, ownerEmail, priceOverride)
-    includeMusic = Boolean(includeMusicOrEmail);
-    ownerEmail = typeof ownerEmailOrPrice === "string" ? ownerEmailOrPrice : undefined;
-    finalPrice = priceOverride !== undefined 
-      ? priceOverride 
-      : (livePrices.basePrice + (includeMusic ? livePrices.musicPrice : 0));
+  if (planId === 'starter') {
+    finalPrice = priceOverride !== undefined ? priceOverride : liveTiers.starter;
+    planTitle = `Carta Digitale Smart • ${nomeRistorante}`;
+  } else if (planId === 'royal') {
+    finalPrice = priceOverride !== undefined ? priceOverride : liveTiers.royal;
+    planTitle = `Royal Experience & Sound Identity SIAE • ${nomeRistorante}`;
   }
-
-  const planType = includeMusic ? "sblocco_con_brano" : "sblocco";
-  const planTitle = includeMusic
-    ? `Smart Menu + Colonna Sonora d'Autore SIAE • ${nomeRistorante}`
-    : `Sblocco Smart Menu & Storytelling • ${nomeRistorante}`;
 
   const payload = {
     progetto: "Experience",
     portal_type: "experience",
     title: planTitle,
     price: finalPrice,
-    ricarica_tipo: planType,
+    ricarica_tipo: planId,
     email: ownerEmail || undefined,
     agency_id: slug,
     project_id: slug,
@@ -129,4 +112,14 @@ export async function avviaCheckoutExperience(
     console.error("Errore checkout Experience:", err);
     alert("Impossibile avviare il pagamento. Riprova tra poco.");
   }
+}
+
+// Retrocompatibilità per UnlockBanner.tsx legacy call
+export async function avviaCheckoutExperience(
+  slug: string = "nuovo_ristorante",
+  nomeRistorante: string = "Nuovo Ristorante",
+  ownerEmail?: string,
+  priceOverride?: number
+): Promise<void> {
+  return avviaCheckoutTierExperience('pro', slug, nomeRistorante, ownerEmail, priceOverride);
 }

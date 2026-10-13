@@ -65,6 +65,17 @@ export async function avviaCheckoutTierExperience(
   priceOverride?: number
 ): Promise<void> {
   const origin = typeof window !== "undefined" ? window.location.origin : "https://experience.rmstudio.app";
+  const SUPERADMIN_EMAILS = [
+    "modena.riccardo@gmail.com",
+    "riccardo@rmstudio.app",
+    "info@rmstudio.app"
+  ];
+
+  if (ownerEmail && SUPERADMIN_EMAILS.includes(ownerEmail.toLowerCase().trim())) {
+    console.log("👑 SuperAdmin Riccardo Modena — Bypass Stripe attivo");
+    window.location.href = `${origin}/${slug}?success=true&admin_bypass=true`;
+    return;
+  }
   const liveTiers = await getLiveTiersExperience();
 
   let finalPrice = priceOverride !== undefined ? priceOverride : liveTiers.pro;

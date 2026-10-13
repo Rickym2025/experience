@@ -22,13 +22,13 @@ export default function LandingHero() {
         I clienti inquadrano il QR Code con lo smartphone e vedono le foto reali dei piatti, la storia delle materie prime, il vino perfetto consigliato per ogni portata e un assistente AI che risponde a ogni dubbio sugli allergeni.
       </p>
 
-      {/* Pulsanti CTA */}
+      {/* Pulsanti CTA (Senza prezzi hardcoded) */}
       <div className="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-md mx-auto mb-16">
         <a 
           href="#pricing" 
           className="w-full sm:w-auto px-9 py-5 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-black font-black rounded-2xl transition-all shadow-xl shadow-amber-500/25 uppercase tracking-wider text-sm flex items-center justify-center gap-2 cursor-pointer"
         >
-          <Utensils size={18} /> Sblocca il tuo Locale (€390)
+          <Utensils size={18} /> Sblocca il tuo Locale ➔
         </a>
         <a 
           href="#features" 

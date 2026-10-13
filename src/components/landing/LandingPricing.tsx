@@ -1,120 +1,241 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { CheckCircle2, Sparkles, Music2, Plus } from "lucide-react";
-import { avviaCheckoutExperience, getLivePricesExperience } from "@/lib/stripe";
+import { Check, Sparkles, Flame, Crown, Music, ShieldCheck } from "lucide-react";
+import { avviaCheckoutTierExperience, getLiveTiersExperience, ExperienceTierPrices } from "@/lib/stripe";
 
 export default function LandingPricing() {
-  const [loading, setLoading] = useState<boolean>(false);
-  const [basePrice, setBasePrice] = useState<number>(390);
-  const [musicPrice, setMusicPrice] = useState<number>(250);
-  const [includeMusic, setIncludeMusic] = useState<boolean>(false);
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [tiers, setTiers] = useState<ExperienceTierPrices>({
+    starter: 190,
+    pro: 390,
+    royal: 690,
+    musicAddon: 300
+  });
 
-  // Scarica i prezzi aggiornati da Supabase S2 all'avvio (Zero-Flicker con fallback)
+  // Scarica in tempo reale i prezzi da Supabase S2 all'avvio
   useEffect(() => {
-    getLivePricesExperience().then((prices) => {
-      setBasePrice(prices.basePrice);
-      setMusicPrice(prices.musicPrice);
-    });
+    getLiveTiersExperience().then((res) => setTiers(res));
   }, []);
 
-  const totalPrice = basePrice + (includeMusic ? musicPrice : 0);
-
-  const handleUnlock = async (): Promise<void> => {
-    setLoading(true);
-    await avviaCheckoutExperience("nuovo_ristorante", "Nuovo Ristorante", includeMusic, undefined, totalPrice);
-    setLoading(false);
+  const handleCheckout = async (planId: 'starter' | 'pro' | 'royal') => {
+    setLoadingPlan(planId);
+    await avviaCheckoutTierExperience(planId, "nuovo_locale", "Nuovo Locale", undefined, tiers[planId]);
+    setLoadingPlan(null);
   };
 
   return (
-    <section id="pricing" className="py-24 px-6 relative z-10 max-w-5xl mx-auto">
+    <section id="pricing" className="py-24 px-6 relative z-10 max-w-6xl mx-auto">
+      
+      {/* Intestazione Neuromarketing */}
       <div className="text-center mb-16">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold uppercase tracking-widest mb-4">
-          <Sparkles size={14} /> Tariffa Una Tantum Trasparente
+          <Sparkles size={14} /> Zero Canoni Mensili • Investimento Una Tantum
         </div>
         <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight">
-          Investi sull&apos;Esperienza, <br /><span className="text-amber-400">non sui canoni mensili.</span>
+          Investi sull&apos;Arte dell&apos;Esperienza, <br />
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-400 to-amber-200">
+            non sulle percentuali d&apos;asporto.
+          </span>
         </h2>
-        <p className="text-stone-400 mt-4 max-w-xl mx-auto text-base">
-          Nessuna commissione sulle portate. Paga una sola volta per pubblicare il tuo portale definitivo.
+        <p className="text-stone-400 mt-4 max-w-2xl mx-auto text-base">
+          Zero abbonamenti ricorrenti, zero commissioni sulle comande. Sblocchi il portale del tuo ristorante una sola volta ed è tuo a vita.
         </p>
       </div>
 
-      <div className="max-w-2xl mx-auto bg-gradient-to-b from-amber-950/30 via-zinc-900 to-black border-2 border-amber-500/70 p-8 sm:p-10 rounded-[2.5rem] shadow-2xl shadow-amber-500/15 relative">
-        <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-400 to-orange-500 text-black text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-wider shadow-lg">
-          PACCHETTO PORTALE DEFINITIVO
-        </div>
+      {/* ─── GRIGLIA A 3 LIVELLI (NEUROMARKETING COMPROMISE EFFECT) ─── */}
+      <div className="grid lg:grid-cols-3 gap-8 items-stretch pt-4">
+        
+        {/* TIER 1: ANCORA MINIMA (Carta Digitale Smart) */}
+        <div className="bg-[#0b0d14]/90 border border-white/10 rounded-3xl p-7 flex flex-col justify-between hover:border-white/20 transition-all shadow-xl">
+          <div>
+            <div className="text-xs font-extrabold text-stone-400 uppercase tracking-widest mb-2 font-mono">
+              Base • Iniziale
+            </div>
+            <h3 className="text-xl font-bold font-serif text-white">Carta Digitale</h3>
+            <p className="text-xs text-stone-400 mt-2 leading-relaxed">
+              Per locali che vogliono sostituire il foglio cartaceo con una carta mobile rapida ed elegante.
+            </p>
 
-        {/* Testata Prezzo Dinamico */}
-        <div className="text-center border-b border-white/10 pb-8 mb-8">
-          <h3 className="text-2xl font-black text-white uppercase">Sblocco Smart Menu &amp; Storytelling</h3>
-          <div className="mt-4 flex items-baseline justify-center gap-2">
-            <span className="text-5xl sm:text-6xl font-black text-white">€ {totalPrice}</span>
-            <span className="text-stone-400 text-xs font-bold uppercase">una tantum</span>
+            <div className="mt-6 pb-6 border-b border-white/10">
+              <div className="flex items-baseline gap-2">
+                <span className="text-4xl font-black text-white">€ {tiers.starter}</span>
+                <span className="text-xs text-stone-400 font-bold uppercase font-mono">una tantum</span>
+              </div>
+              <span className="text-[11px] text-stone-400 block mt-1">Nessun costo mensile</span>
+            </div>
+
+            <ul className="space-y-3 pt-6 text-xs text-stone-300">
+              <li className="flex items-center gap-2.5">
+                <Check size={15} className="text-amber-400 shrink-0" />
+                <span>Smart Menu mobile consultabile via QR Code</span>
+              </li>
+              <li className="flex items-center gap-2.5">
+                <Check size={15} className="text-amber-400 shrink-0" />
+                <span>Foto piatti in alta definizione &amp; allergeni base</span>
+              </li>
+              <li className="flex items-center gap-2.5">
+                <Check size={15} className="text-amber-400 shrink-0" />
+                <span>Sottodominio dedicato (es. <i>menu.tuolocale.it</i>)</span>
+              </li>
+              <li className="flex items-center gap-2.5 text-stone-400">
+                <span className="text-stone-400 text-sm">✕</span>
+                <span className="line-through">Nessun Sommelier AI &amp; Abbinamenti Vino</span>
+              </li>
+              <li className="flex items-center gap-2.5 text-stone-400">
+                <span className="text-stone-400 text-sm">✕</span>
+                <span className="line-through">Nessun Storytelling filiera e materie prime</span>
+              </li>
+              <li className="flex items-center gap-2.5 text-stone-400">
+                <span className="text-stone-400 text-sm">✕</span>
+                <span className="line-through">Nessun Maître Virtuale Nexus H24</span>
+              </li>
+            </ul>
           </div>
-          <p className="text-xs text-amber-400 font-bold mt-2">Zero canoni mensili • Il portale è tuo a vita</p>
+
+          <button
+            onClick={() => handleCheckout('starter')}
+            disabled={loadingPlan !== null}
+            className="w-full mt-8 py-4 bg-stone-900 hover:bg-stone-800 border border-white/20 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition cursor-pointer"
+          >
+            {loadingPlan === 'starter' ? 'Caricamento...' : `Attiva Base (€${tiers.starter})`}
+          </button>
         </div>
 
-        {/* Caratteristiche Base Incluse */}
-        <ul className="space-y-3.5 text-xs sm:text-sm text-stone-200 mb-8">
-          <li className="flex items-center gap-3">
-            <CheckCircle2 size={16} className="text-amber-400 shrink-0" />
-            <span>Dominio dedicato o sottodominio personalizzato (es. <i>menu.tuoristorante.it</i>)</span>
-          </li>
-          <li className="flex items-center gap-3">
-            <CheckCircle2 size={16} className="text-amber-400 shrink-0" />
-            <span>Storytelling degli ingredienti, frollature e provenienza a km 0</span>
-          </li>
-          <li className="flex items-center gap-3">
-            <CheckCircle2 size={16} className="text-amber-400 shrink-0" />
-            <span>Abbinamenti vino guidati calice/bottiglia consigliati per ogni piatto</span>
-          </li>
-          <li className="flex items-center gap-3">
-            <CheckCircle2 size={16} className="text-amber-400 shrink-0" />
-            <span>Maître Virtuale AI (Nexus) per allergeni, celiachia e prenotazioni</span>
-          </li>
-          <li className="flex items-center gap-3">
-            <CheckCircle2 size={16} className="text-amber-400 shrink-0" />
-            <span>Grafica vettoriale QR Code ad alta risoluzione pronta per la stampa</span>
-          </li>
-        </ul>
+        {/* TIER 2: IL CENTRO IRRESISTIBILE (SWEET SPOT CON EFFETTO LASER GLOW) */}
+        <div className="relative rounded-3xl p-[2px] bg-gradient-to-b from-amber-400 via-orange-500 to-amber-600 shadow-[0_0_50px_rgba(245,158,11,0.25)] flex flex-col justify-between transform lg:-translate-y-4">
+          
+          {/* Badge Superiore di Riprova Sociale & Scarsità */}
+          <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 text-slate-950 text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-wider shadow-lg flex items-center gap-1.5 whitespace-nowrap">
+            <Flame size={13} className="fill-slate-950" /> SCELTO DALL&apos;84% DELLE STRUTTURE
+          </div>
 
-        {/* ─── ADD-ON OPZIONALE: COLONNA SONORA FF EDIZIONI & FAUSTO FUSETTI ─── */}
-        <div className="mb-8 p-4 sm:p-5 rounded-2xl bg-[#0e1017] border border-amber-500/30 hover:border-amber-500/60 transition-all">
-          <label className="flex items-start gap-3.5 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={includeMusic}
-              onChange={(e) => setIncludeMusic(e.target.checked)}
-              className="mt-1 w-5 h-5 accent-amber-500 rounded cursor-pointer shrink-0"
-            />
-            <div className="flex-1 text-left">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
-                  <Music2 size={16} className="text-amber-400" />
-                  Add-on: Colonna Sonora d&apos;Autore Inedita
+          <div className="bg-[#0a0c14] rounded-[22px] p-7 sm:p-8 h-full flex flex-col justify-between">
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-xs font-black text-amber-400 uppercase tracking-widest font-mono">
+                  ★ Esperienza Completa
                 </span>
-                <span className="text-xs font-black text-amber-400 font-mono shrink-0">
-                  +€ {musicPrice}
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold">
+                  Miglior Valore
                 </span>
               </div>
-              <p className="text-[11px] sm:text-xs text-stone-400 mt-1 leading-relaxed">
-                Composizione musicale originale ed esclusiva prodotta e registrata in SIAE con il <strong>Maestro Fausto Fusetti (FF Edizioni)</strong>. Un&apos;identità sonora memorabile che accoglie i commensali sul menu.
+              
+              <h3 className="text-2xl font-black font-serif text-white">Signature Experience</h3>
+              <p className="text-xs text-stone-300 mt-2 leading-relaxed">
+                Il pacchetto sensoriale definitivo: fa percepire il valore dei piatti ed incentiva le etichette prestigiose della tua cantina.
               </p>
+
+              <div className="mt-6 pb-6 border-b border-amber-500/20">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-5xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-orange-400 font-serif">
+                    € {tiers.pro}
+                  </span>
+                  <span className="text-xs text-stone-400 font-bold uppercase font-mono">una tantum</span>
+                </div>
+                <span className="text-xs text-emerald-400 font-bold flex items-center gap-1 mt-1.5">
+                  <ShieldCheck size={14} /> Si ripaga nei primi 3 weekend di servizio
+                </span>
+              </div>
+
+              <ul className="space-y-3.5 pt-6 text-xs sm:text-sm text-stone-200">
+                <li className="flex items-center gap-2.5 font-semibold text-white">
+                  <Check size={16} className="text-amber-400 shrink-0" />
+                  <span><strong>Sommelier AI &amp; Wine Pairing:</strong> consiglia bottiglia e calice per ogni portata</span>
+                </li>
+                <li className="flex items-center gap-2.5 font-semibold text-white">
+                  <Check size={16} className="text-amber-400 shrink-0" />
+                  <span><strong>Storytelling Materie Prime:</strong> origine km 0, frollature ed allevamenti</span>
+                </li>
+                <li className="flex items-center gap-2.5">
+                  <Check size={16} className="text-amber-400 shrink-0" />
+                  <span><strong>Maître Virtuale Nexus H24:</strong> risponde su allergeni, celiachia ed accoglienza</span>
+                </li>
+                <li className="flex items-center gap-2.5">
+                  <Check size={16} className="text-amber-400 shrink-0" />
+                  <span><strong>Vibe Video dell&apos;Atmosfera:</strong> micro-video emozionali della sala e dei vigneti</span>
+                </li>
+                <li className="flex items-center gap-2.5">
+                  <Check size={16} className="text-amber-400 shrink-0" />
+                  <span><strong>Guida GPS Interattiva:</strong> calcolo tempi e distanza stradale per i visitatori</span>
+                </li>
+                <li className="flex items-center gap-2.5">
+                  <Check size={16} className="text-amber-400 shrink-0" />
+                  <span>Grafica vettoriale QR Code ad alta risoluzione per i tavoli</span>
+                </li>
+              </ul>
             </div>
-          </label>
+
+            <button
+              onClick={() => handleCheckout('pro')}
+              disabled={loadingPlan !== null}
+              className="w-full mt-8 py-5 bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 hover:scale-[1.02] text-slate-950 font-black text-xs sm:text-sm uppercase tracking-wider rounded-2xl transition shadow-xl shadow-amber-500/30 cursor-pointer"
+            >
+              {loadingPlan === 'pro' ? 'Apertura Checkout...' : `Attiva Signature Experience (€${tiers.pro}) ➔`}
+            </button>
+          </div>
         </div>
 
-        {/* Pulsante Checkout con Totale Reale */}
-        <button
-          onClick={handleUnlock}
-          disabled={loading}
-          className="w-full py-5 bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 hover:from-amber-300 hover:to-orange-400 text-black font-black rounded-2xl transition-all shadow-xl shadow-amber-500/25 uppercase tracking-wider text-sm cursor-pointer disabled:opacity-50"
-        >
-          {loading 
-            ? "Apertura Checkout Sicuro..." 
-            : `Sblocca il tuo Locale Ora (€${totalPrice}) 🚀`}
-        </button>
+        {/* TIER 3: ANCORA DI LUSSO & SOUND IDENTITY (€690 con Brano SIAE a €300) */}
+        <div className="bg-[#0b0d14]/90 border border-amber-500/30 rounded-3xl p-7 flex flex-col justify-between hover:border-amber-500/60 transition-all shadow-xl">
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-xs font-extrabold text-amber-400 uppercase tracking-widest font-mono flex items-center gap-1">
+                <Crown size={14} /> Tenute &amp; Resort
+              </span>
+              <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 text-[10px] font-bold">
+                Musica SIAE
+              </span>
+            </div>
+
+            <h3 className="text-xl font-bold font-serif text-white">Royal &amp; Sound Identity</h3>
+            <p className="text-xs text-stone-400 mt-2 leading-relaxed">
+              Per tenute vinicole, stellati e residenze storiche che desiderano un&apos;identità sonora esclusiva e memorabile.
+            </p>
+
+            <div className="mt-6 pb-6 border-b border-white/10">
+              <div className="flex items-baseline gap-2">
+                <span className="text-4xl font-black text-white">€ {tiers.royal}</span>
+                <span className="text-xs text-stone-400 font-bold uppercase font-mono">una tantum</span>
+              </div>
+              <span className="text-xs text-amber-400 font-semibold block mt-1">
+                Include Brano d&apos;Autore SIAE (€{tiers.musicAddon})
+              </span>
+            </div>
+
+            <ul className="space-y-3 pt-6 text-xs text-stone-300">
+              <li className="flex items-center gap-2.5 font-bold text-amber-300">
+                <Music size={15} className="text-amber-400 shrink-0" />
+                <span><strong>Colonna Sonora Inedita SIAE (€300):</strong> composta dal Maestro Fausto Fusetti (FF Edizioni)</span>
+              </li>
+              <li className="flex items-center gap-2.5 font-bold text-white">
+                <Check size={15} className="text-amber-400 shrink-0" />
+                <span>Tutte le funzionalità di Signature Experience</span>
+              </li>
+              <li className="flex items-center gap-2.5">
+                <Check size={15} className="text-amber-400 shrink-0" />
+                <span>Storytelling completo della cantina e riserve storiche</span>
+              </li>
+              <li className="flex items-center gap-2.5">
+                <Check size={15} className="text-amber-400 shrink-0" />
+                <span>Player musicale integrato nel menu mobile</span>
+              </li>
+              <li className="flex items-center gap-2.5">
+                <Check size={15} className="text-amber-400 shrink-0" />
+                <span>Supporto VIP prioritario per modifiche del menu stagionale</span>
+              </li>
+            </ul>
+          </div>
+
+          <button
+            onClick={() => handleCheckout('royal')}
+            disabled={loadingPlan !== null}
+            className="w-full mt-8 py-4 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition cursor-pointer shadow-lg shadow-amber-900/30"
+          >
+            {loadingPlan === 'royal' ? 'Caricamento...' : `Attiva Royal Experience (€${tiers.royal})`}
+          </button>
+        </div>
+
       </div>
     </section>
   );

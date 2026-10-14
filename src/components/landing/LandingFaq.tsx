@@ -21,7 +21,7 @@ const FAQS = [
     a: "L'assistente virtuale legge la lista degli ingredienti e degli allergeni inseriti nel database: se un cliente chiede 'Quali piatti sono senza glutine?', l'AI mostra solo le portate sicure."
   },
   {
-    q: "Cosa ricevo dopo aver pagato i 390€?",
+    q: "Cosa ricevo dopo aver pagato i 350€?",
     a: "Attiviamo il tuo sito definitivo, colleghiamo il tuo dominio personalizzato (es: menu.nomeosteria.it), impostiamo il certificato di sicurezza SSL e ti inviamo i file grafici del QR Code da stampare per i tavoli."
   },
   {

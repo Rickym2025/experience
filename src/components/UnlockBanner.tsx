@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { avviaCheckoutExperience, getLivePriceExperience } from "@/lib/stripe";
 
 interface UnlockBannerProps {
@@ -25,13 +26,37 @@ export default function UnlockBanner({
   const [loading, setLoading] = useState(false);
   const [minimized, setMinimized] = useState(false);
   const [livePrice, setLivePrice] = useState<number>(390);
+  const [isSuperAdminBrowser, setIsSuperAdminBrowser] = useState(false);
+
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     getLivePriceExperience(390).then(p => setLivePrice(p));
+
+    // Controllo SuperAdmin via localStorage del browser
+    if (typeof window !== "undefined") {
+      const isUnlockedLocally =
+        localStorage.getItem("locanda_unlocked") === "true" ||
+        localStorage.getItem("rm_superadmin") === "true";
+      if (isUnlockedLocally) {
+        setIsSuperAdminBrowser(true);
+      }
+    }
   }, []);
 
+  // 1. Controllo email del proprietario da Supabase
   const isOwnerAdmin = !!ownerEmail && SUPERADMIN_EMAILS.includes(ownerEmail.toLowerCase().trim());
-  if (isPaid || isOwnerAdmin) return null;
+
+  // 2. Controllo parametro URL (es. ?admin=true o ?admin_bypass=true dal Portale)
+  const isAdminParam =
+    searchParams.get("admin") === "true" ||
+    searchParams.get("admin_bypass") === "true" ||
+    searchParams.get("pin") === "RM2026!";
+
+  // Se è pagato, se il proprietario sei tu, se sei in modalità ?admin=true o se il browser è sbloccato -> SPENTA AL 100%
+  if (isPaid || isOwnerAdmin || isAdminParam || isSuperAdminBrowser) {
+    return null;
+  }
 
   const handleUnlock = async () => {
     setLoading(true);

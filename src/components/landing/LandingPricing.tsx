@@ -6,6 +6,7 @@ import { avviaCheckoutTierExperience, getLiveTiersExperience, ExperienceTierPric
 
 export default function LandingPricing() {
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [tiers, setTiers] = useState<ExperienceTierPrices>({
     starter: 190,
     pro: 390,
@@ -13,12 +14,28 @@ export default function LandingPricing() {
     musicAddon: 300
   });
 
-  // Scarica in tempo reale i prezzi da Supabase S2 all'avvio
+  // Scarica in tempo reale i prezzi da Supabase S2 e verifica se sei SuperAdmin
   useEffect(() => {
     getLiveTiersExperience().then((res) => setTiers(res));
+
+    if (typeof window !== "undefined") {
+      const adminActive =
+        localStorage.getItem("locanda_unlocked") === "true" ||
+        localStorage.getItem("rm_superadmin") === "true" ||
+        window.location.search.includes("admin=true") ||
+        window.location.search.includes("pin=RM2026!");
+      setIsSuperAdmin(adminActive);
+    }
   }, []);
 
   const handleCheckout = async (planId: 'starter' | 'pro' | 'royal') => {
+    // 👑 BYPASS SUPERADMIN RICCARDO MODENA: se sei admin, niente Stripe!
+    if (isSuperAdmin) {
+      alert("👑 Modalità SuperAdmin Attiva (Riccardo Modena).\nPer creare e gestire le Experience senza costi, accedi direttamente dal tuo Command Center Portale!");
+      window.open("https://portale.rmstudio.app", "_blank");
+      return;
+    }
+
     setLoadingPlan(planId);
     await avviaCheckoutTierExperience(planId, "nuovo_locale", "Nuovo Locale", undefined, tiers[planId]);
     setLoadingPlan(null);
@@ -41,6 +58,12 @@ export default function LandingPricing() {
         <p className="text-stone-400 mt-4 max-w-2xl mx-auto text-base">
           Zero abbonamenti ricorrenti, zero commissioni sulle comande. Sblocchi il portale del tuo ristorante una sola volta ed è tuo a vita.
         </p>
+
+        {isSuperAdmin && (
+          <div className="mt-4 inline-block bg-amber-500/10 border border-amber-500/40 text-amber-300 text-xs font-mono font-bold px-3 py-1 rounded-full">
+            👑 SuperAdmin Attivo: bypass Stripe abilitato
+          </div>
+        )}
       </div>
 
       {/* ─── GRIGLIA A 3 LIVELLI (NEUROMARKETING COMPROMISE EFFECT) ─── */}
@@ -59,10 +82,10 @@ export default function LandingPricing() {
 
             <div className="mt-6 pb-6 border-b border-white/10">
               <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-black text-white">€ {tiers.starter}</span>
+                <span className="text-4xl font-black text-white inline-block py-1 leading-[1.1]">€ {tiers.starter}</span>
                 <span className="text-xs text-stone-400 font-bold uppercase font-mono">una tantum</span>
               </div>
-              <span className="text-[11px] text-stone-400 block mt-1">Nessun costo mensile</span>
+              <span className="text-[11px] text-stone-400 block mt-1.5">Nessun costo mensile</span>
             </div>
 
             <ul className="space-y-3 pt-6 text-xs text-stone-300">
@@ -102,10 +125,10 @@ export default function LandingPricing() {
           </button>
         </div>
 
-        {/* TIER 2: IL CENTRO IRRESISTIBILE (SWEET SPOT CON EFFETTO LASER GLOW) */}
+        {/* TIER 2: IL CENTRO IRRESISTIBILE (SWEET SPOT) */}
         <div className="relative rounded-3xl p-[2px] bg-gradient-to-b from-amber-400 via-orange-500 to-amber-600 shadow-[0_0_50px_rgba(245,158,11,0.25)] flex flex-col justify-between transform lg:-translate-y-4">
           
-          {/* Badge Superiore di Riprova Sociale & Scarsità */}
+          {/* Badge Superiore */}
           <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 text-slate-950 text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-wider shadow-lg flex items-center gap-1.5 whitespace-nowrap">
             <Flame size={13} className="fill-slate-950" /> SCELTO DALL&apos;84% DELLE STRUTTURE
           </div>
@@ -126,15 +149,16 @@ export default function LandingPricing() {
                 Il pacchetto sensoriale definitivo: fa percepire il valore dei piatti ed incentiva le etichette prestigiose della tua cantina.
               </p>
 
+              {/* FIX NUMERO TAGLIATO: aggiunti inline-block, py-1.5 e leading-[1.15] */}
               <div className="mt-6 pb-6 border-b border-amber-500/20">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-5xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-orange-400 font-serif">
+                  <span className="text-5xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-orange-400 font-serif inline-block py-1.5 leading-[1.15]">
                     € {tiers.pro}
                   </span>
                   <span className="text-xs text-stone-400 font-bold uppercase font-mono">una tantum</span>
                 </div>
-                <span className="text-xs text-emerald-400 font-bold flex items-center gap-1 mt-1.5">
-                  <ShieldCheck size={14} /> Si ripaga nei primi 3 weekend di servizio
+                <span className="text-xs text-emerald-400 font-bold flex items-center gap-1 mt-2.5">
+                  <ShieldCheck size={14} className="shrink-0" /> Si ripaga nei primi 3 weekend di servizio
                 </span>
               </div>
 
@@ -176,7 +200,7 @@ export default function LandingPricing() {
           </div>
         </div>
 
-        {/* TIER 3: ANCORA DI LUSSO & SOUND IDENTITY (€690 con Brano SIAE a €300) */}
+        {/* TIER 3: ANCORA DI LUSSO & SOUND IDENTITY */}
         <div className="bg-[#0b0d14]/90 border border-amber-500/30 rounded-3xl p-7 flex flex-col justify-between hover:border-amber-500/60 transition-all shadow-xl">
           <div>
             <div className="flex justify-between items-center mb-2">
@@ -195,10 +219,10 @@ export default function LandingPricing() {
 
             <div className="mt-6 pb-6 border-b border-white/10">
               <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-black text-white">€ {tiers.royal}</span>
+                <span className="text-4xl font-black text-white inline-block py-1 leading-[1.1]">€ {tiers.royal}</span>
                 <span className="text-xs text-stone-400 font-bold uppercase font-mono">una tantum</span>
               </div>
-              <span className="text-xs text-amber-400 font-semibold block mt-1">
+              <span className="text-xs text-amber-400 font-semibold block mt-1.5">
                 Include Brano d&apos;Autore SIAE (€{tiers.musicAddon})
               </span>
             </div>

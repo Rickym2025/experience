@@ -22,11 +22,11 @@ const FAQS = [
   },
   {
     q: "Cosa ricevo dopo aver pagato i 350€?",
-    a: "Attiviamo il tuo sito definitivo, colleghiamo il tuo dominio personalizzato (es: menu.nomeosteria.it), impostiamo il certificato di sicurezza SSL e ti inviamo i file grafici del QR Code da stampare per i tavoli."
+    a: "Attiviamo il tuo sito definitivo Signature Experience, colleghiamo il tuo dominio personalizzato (es: menu.nomeosteria.it), abilitiamo Sommelier AI, Maître Virtuale, video dell'atmosfera, SSL e ti inviamo la grafica del QR Code in alta risoluzione per i tavoli. Se desideri anche una colonna sonora inedita registrata SIAE su misura (FF Edizioni), puoi scegliere il pacchetto Royal completo a 600€."
   },
   {
     q: "Ci sono canoni mensili nascosti da pagare ogni mese?",
-    a: "No, a differenza della concorrenza che richiede abbonamenti mensili di 30-50€, Experience si paga una sola volta per la licenza e l'attivazione iniziale."
+    a: "No, a differenza della concorrenza che richiede abbonamenti mensili di 30-50€ o percentuali sulle comande, Experience si paga una sola volta per la licenza e l'attivazione iniziale."
   },
   {
     q: "Posso inserire anche il link per prenotare i tavoli o le recensioni Google?",

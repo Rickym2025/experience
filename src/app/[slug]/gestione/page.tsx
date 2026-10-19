@@ -21,7 +21,8 @@ import {
   ChefHat, 
   Eye, 
   EyeOff, 
-  Sparkles 
+  Sparkles,
+  Play
 } from 'lucide-react';
 
 interface GestionePageProps {
@@ -29,6 +30,7 @@ interface GestionePageProps {
 }
 
 interface LocandaDish {
+  id: string;
   nome_piatto: string;
   video_url: string;
 }
@@ -45,29 +47,47 @@ const PRESET_CATEGORIES = [
   'Vini Bianchi', 'Vini Rossi', 'Aperitivi & Cocktail'
 ];
 
-// Matching automatico compatto Locanda ➔ Gestione
-function findLocandaVideo(dishName: string, locandaList: LocandaDish[]): string | null {
-  if (!dishName || !locandaList.length) return null;
-  const getWords = (s: string) =>
-    s.toLowerCase()
-      .replace(/\([^)]*\)/g, '')
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9\s]/g, ' ')
-      .split(/\s+/)
-      .filter(w => w.length > 2 && !['con','del','della','delle','dei','degli','per','alla','alle'].includes(w));
+const LOCANDA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5udWh6cnpvZWJ1ZHd5YWxldmh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzMzUxMTMsImV4cCI6MjEwMzkxMTExM30.oYADAYynRXyQrfnTMgYUeXpIyML4YnS0VQp3y8HIdGU';
 
-  const dWords = getWords(dishName);
-  let best: { url: string; score: number } | null = null;
+function cleanString(str: string): string {
+  return str
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getKeywords(str: string): string[] {
+  const stopWords = new Set(['con','di','del','della','delle','dei','degli','e','ed','al','alla','alle','in','da','un','una','il','lo','la','i','gli','le']);
+  return cleanString(str).split(' ').filter(w => w.length > 2 && !stopWords.has(w));
+}
+
+function matchLocandaDish(dishName: string, locandaList: LocandaDish[]): LocandaDish | null {
+  if (!dishName || !locandaList.length) return null;
+
+  const cleanedDish = cleanString(dishName);
+  const dishKeywords = getKeywords(dishName);
 
   for (const item of locandaList) {
-    const iWords = getWords(item.nome_piatto);
-    const common = dWords.filter(w => iWords.includes(w)).length;
-    const score = common / Math.min(dWords.length, iWords.length || 1);
-    if (score >= 0.55 && (!best || score > best.score)) {
-      best = { url: item.video_url, score };
+    const cleanedLocanda = cleanString(item.nome_piatto);
+    if (cleanedLocanda === cleanedDish || cleanedLocanda.includes(cleanedDish) || cleanedDish.includes(cleanedLocanda)) {
+      return item;
     }
   }
-  return best?.url || null;
+
+  let best: { item: LocandaDish; score: number } | null = null;
+  for (const item of locandaList) {
+    const iWords = getKeywords(item.nome_piatto);
+    const common = dishKeywords.filter(k => iWords.includes(k)).length;
+    const score = common / Math.min(dishKeywords.length, iWords.length || 1);
+    if (score >= 0.55 && (!best || score > best.score)) {
+      best = { item, score };
+    }
+  }
+
+  return best ? best.item : null;
 }
 
 export default function GestioneMenuPage(props: GestionePageProps) {
@@ -87,7 +107,11 @@ export default function GestioneMenuPage(props: GestionePageProps) {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+  const [editingLocandaId, setEditingLocandaId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Modale anteprima video grande
+  const [previewVideo, setPreviewVideo] = useState<{ url: string; title: string } | null>(null);
 
   const [formData, setFormData] = useState({
     categoria: 'Primi Piatti',
@@ -98,6 +122,7 @@ export default function GestioneMenuPage(props: GestionePageProps) {
     pairing_vino: '',
     storytelling: '',
     foto_url: '',
+    video_url: '',
     is_active: true,
     allergeni: [] as string[]
   });
@@ -160,11 +185,11 @@ export default function GestioneMenuPage(props: GestionePageProps) {
   async function loadLocandaVideos3D() {
     try {
       const res = await fetch(
-        `https://nnuhzrzoebudwyalevht.supabase.co/rest/v1/locanda_piatti?or=(restaurant_slug.eq.${encodeURIComponent(slug)},restaurant_slug.eq.ristorante-m4,restaurant_slug.eq.m4-restaurant)&select=nome_piatto,video_url&is_active=eq.true&video_url=not.is.null`,
+        `https://nnuhzrzoebudwyalevht.supabase.co/rest/v1/locanda_piatti?or=(restaurant_slug.eq.${encodeURIComponent(slug)},restaurant_slug.eq.ristorante-m4,restaurant_slug.eq.m4-restaurant)&select=id,nome_piatto,video_url&is_active=eq.true&video_url=not.is.null`,
         {
           headers: {
-            apikey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5udWh6cnpvZWJ1ZHd5YWxldmh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzMzUxMTMsImV4cCI6MjEwMzkxMTExM30.oYADAYynRXyQrfnTMgYUeXpIyML4YnS0VQp3y8HIdGU',
-            Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5udWh6cnpvZWJ1ZHd5YWxldmh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzMzUxMTMsImV4cCI6MjEwMzkxMTExM30.oYADAYynRXyQrfnTMgYUeXpIyML4YnS0VQp3y8HIdGU'
+            apikey: LOCANDA_KEY,
+            Authorization: `Bearer ${LOCANDA_KEY}`
           },
           cache: 'no-store'
         }
@@ -203,6 +228,7 @@ export default function GestioneMenuPage(props: GestionePageProps) {
 
   function openAddModal() {
     setEditingItem(null);
+    setEditingLocandaId(null);
     setFormData({
       categoria: 'Primi Piatti',
       custom_categoria: '',
@@ -212,14 +238,18 @@ export default function GestioneMenuPage(props: GestionePageProps) {
       pairing_vino: '',
       storytelling: '',
       foto_url: '',
+      video_url: '',
       is_active: true,
       allergeni: []
     });
     setIsModalOpen(true);
   }
 
-  function openEditModal(item: MenuItem & { is_active?: boolean }) {
+  function openEditModal(item: MenuItem & { is_active?: boolean; video_url?: string }) {
     setEditingItem(item);
+    const matchedLocanda = matchLocandaDish(item.nome_piatto, locandaDishes);
+    setEditingLocandaId(matchedLocanda?.id || null);
+
     const isPresetCat = PRESET_CATEGORIES.includes(item.categoria);
     setFormData({
       categoria: isPresetCat ? item.categoria : 'Altro',
@@ -230,6 +260,7 @@ export default function GestioneMenuPage(props: GestionePageProps) {
       pairing_vino: item.pairing_vino || '',
       storytelling: item.storytelling || '',
       foto_url: item.foto_url || '',
+      video_url: matchedLocanda?.video_url || item.video_url || '',
       is_active: item.is_active !== false,
       allergeni: Array.isArray(item.allergeni) ? item.allergeni : []
     });
@@ -264,7 +295,7 @@ export default function GestioneMenuPage(props: GestionePageProps) {
       ? formData.custom_categoria.trim()
       : formData.categoria;
 
-    const payload = {
+    const payload: any = {
       experience_slug: slug,
       categoria: finalCategoria,
       nome_piatto: formData.nome_piatto.trim(),
@@ -281,12 +312,27 @@ export default function GestioneMenuPage(props: GestionePageProps) {
       if (editingItem) {
         const { error } = await supabase.from('taste_menus').update(payload).eq('id', editingItem.id);
         if (error) throw error;
+
+        // Se è associato a un piatto di Locanda, sincronizza anche lì il video (modifica o rimozione)
+        if (editingLocandaId) {
+          await fetch(`https://nnuhzrzoebudwyalevht.supabase.co/rest/v1/locanda_piatti?id=eq.${editingLocandaId}`, {
+            method: 'PATCH',
+            headers: {
+              apikey: LOCANDA_KEY,
+              Authorization: `Bearer ${LOCANDA_KEY}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify({ video_url: formData.video_url.trim() || null })
+          });
+        }
       } else {
         const { error } = await supabase.from('taste_menus').insert([payload]);
         if (error) throw error;
       }
 
       await reloadMenu();
+      await loadLocandaVideos3D();
       setIsModalOpen(false);
     } catch (err: any) {
       alert("Errore salvataggio: " + (err.message || 'Errore di connessione'));
@@ -296,7 +342,7 @@ export default function GestioneMenuPage(props: GestionePageProps) {
   }
 
   async function handleDelete(item: MenuItem) {
-    if (!confirm(`Vuoi eliminare "${item.nome_piatto}"?`)) return;
+    if (!confirm(`Vuoi eliminare "${item.nome_piatto}" dal menu?`)) return;
     try {
       const { error } = await supabase.from('taste_menus').delete().eq('id', item.id);
       if (error) throw error;
@@ -457,7 +503,8 @@ export default function GestioneMenuPage(props: GestionePageProps) {
             const isActive = (item as any).is_active !== false;
             
             // Video automatico da Locanda con matching intelligente
-            const video3DUrl = findLocandaVideo(item.nome_piatto, locandaDishes);
+            const matchedLocanda = matchLocandaDish(item.nome_piatto, locandaDishes);
+            const video3DUrl = matchedLocanda?.video_url || (item as any).video_url || null;
 
             // Filtro immagini Unsplash
             const isUnsplash = (item.foto_url || '').toLowerCase().includes('unsplash.com');
@@ -472,20 +519,27 @@ export default function GestioneMenuPage(props: GestionePageProps) {
                     : 'bg-zinc-950/40 border-zinc-900/60 opacity-60'
                 }`}
               >
-                <div className="w-16 h-24 rounded-xl overflow-hidden relative bg-black shrink-0 border border-amber-500/40 shadow-lg flex items-center justify-center [isolation:isolate]">
+                {/* THUMBNAIL CON CLIC PER ANTEPRIMA VIDEO GRANDE */}
+                <div 
+                  onClick={() => {
+                    if (video3DUrl) setPreviewVideo({ url: video3DUrl, title: item.nome_piatto });
+                  }}
+                  className={`w-16 h-24 rounded-xl overflow-hidden relative bg-black shrink-0 border border-amber-500/40 shadow-lg flex items-center justify-center ${video3DUrl ? 'cursor-pointer hover:border-amber-400 transition-colors' : ''}`}
+                  title={video3DUrl ? 'Clicca per vedere il video grande' : ''}
+                >
                   {video3DUrl ? (
                     <>
                       <video 
                         src={video3DUrl} 
-                        autoPlay 
-                        loop 
+                        preload="metadata"
                         muted 
-                        playsInline 
-                        preload="auto"
-                        style={{ transform: 'translate3d(0, 0, 0)', willChange: 'transform' }}
+                        playsInline
                         className="pointer-events-none w-full h-full object-cover" 
                       />
                       <span className="absolute top-1 left-1 px-1 py-0.5 bg-amber-500 text-slate-950 font-black text-[7px] uppercase rounded shadow z-10 pointer-events-none">3D 🎬</span>
+                      <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                        <Play size={12} fill="white" className="text-white opacity-80" />
+                      </div>
                     </>
                   ) : realFoto ? (
                     <img src={realFoto} alt={item.nome_piatto} className="w-full h-full object-cover" />
@@ -510,9 +564,13 @@ export default function GestioneMenuPage(props: GestionePageProps) {
                       </span>
                     )}
                     {video3DUrl && (
-                      <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 text-[9px] font-bold flex items-center gap-1 border border-purple-500/30">
-                        <Sparkles className="w-2.5 h-2.5 text-purple-400" /> Spot 3D Collegato
-                      </span>
+                      <button 
+                        onClick={() => setPreviewVideo({ url: video3DUrl, title: item.nome_piatto })}
+                        className="px-2 py-0.5 rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 text-[9px] font-bold flex items-center gap-1 border border-purple-500/30 cursor-pointer"
+                        title="Guarda a schermo intero"
+                      >
+                        <Sparkles className="w-2.5 h-2.5 text-purple-400" /> Spot 3D Attivo (Guarda)
+                      </button>
                     )}
                   </div>
 
@@ -576,6 +634,42 @@ export default function GestioneMenuPage(props: GestionePageProps) {
         ownerName={experience?.owner_name}
       />
 
+      {/* ─── MODALE PER VEDERE IL VIDEO 3D "GRANDE" (A SCHERMO INTERO A 60 FPS) ─── */}
+      {previewVideo && (
+        <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="relative w-full max-w-sm rounded-3xl overflow-hidden border border-white/20 shadow-2xl bg-black">
+            <button
+              onClick={() => setPreviewVideo(null)}
+              className="absolute top-3 right-3 z-20 w-10 h-10 rounded-full bg-black/70 text-white flex items-center justify-center border border-white/20 hover:bg-zinc-800 transition-colors cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+            <div style={{ aspectRatio: '9/16' }} className="relative max-h-[75vh]">
+              <video
+                src={previewVideo.url}
+                autoPlay
+                controls
+                playsInline
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="p-4 bg-zinc-950 border-t border-white/10 flex justify-between items-center">
+              <div>
+                <span className="text-[10px] uppercase font-bold text-amber-400 font-mono">Spot 3D Collegato</span>
+                <p className="text-xs font-bold text-white truncate">{previewVideo.title}</p>
+              </div>
+              <button
+                onClick={() => setPreviewVideo(null)}
+                className="px-3 py-1.5 rounded-xl bg-zinc-900 border border-zinc-700 text-zinc-300 text-xs font-bold hover:text-white"
+              >
+                Chiudi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODALE MODIFICA/AGGIUNTA CON CAMPO VIDEO 3D DEDICATO ─── */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-zinc-950 border border-amber-500/30 rounded-3xl max-w-xl w-full p-6 sm:p-8 space-y-5 shadow-2xl relative max-h-[92vh] overflow-y-auto my-8">
@@ -663,6 +757,34 @@ export default function GestioneMenuPage(props: GestionePageProps) {
                   onChange={e => setFormData({ ...formData, pairing_vino: e.target.value })}
                   className="w-full bg-zinc-900 border border-purple-500/40 rounded-xl px-3 py-2 text-xs text-purple-200 outline-none focus:border-purple-400 font-semibold"
                 />
+              </div>
+
+              {/* CAMPO DEDICATO PER VIDEO 3D SPOT: IL RISTORATORE PUÒ MODIFICARLO O RIMUOVERLO */}
+              <div className="p-3 bg-purple-950/20 border border-purple-500/30 rounded-xl space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <label className="block text-[10px] font-bold uppercase text-purple-300 flex items-center gap-1">
+                    <Sparkles size={12} className="text-purple-400" /> URL Video 3D (Spot Animato)
+                  </label>
+                  {formData.video_url && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, video_url: '' })}
+                      className="text-[10px] text-rose-400 hover:text-rose-300 font-bold underline cursor-pointer"
+                    >
+                      ✕ Rimuovi Video 3D
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="url"
+                  placeholder="https://...mp4"
+                  value={formData.video_url}
+                  onChange={e => setFormData({ ...formData, video_url: e.target.value })}
+                  className="w-full bg-zinc-900 border border-purple-500/30 rounded-xl px-3 py-2 text-xs text-purple-200 outline-none focus:border-purple-400 font-mono"
+                />
+                <span className="text-[10px] text-zinc-400 block">
+                  Se inserito, il piatto mostrerà il video a 60 FPS al tavolo. Lascia vuoto per mostrare solo testo/foto.
+                </span>
               </div>
 
               <div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { ChefHat, Wine } from 'lucide-react';
+import { ChefHat, Sparkles } from 'lucide-react';
 
 interface Message {
   sender: 'bot' | 'user';
@@ -18,15 +18,17 @@ interface NexusWidgetProps {
 
 export default function NexusWidget({
   botId,
-  brandColor = '#68a19b',
+  brandColor = '#d97706',
   nomeRistorante = 'Locanda Venezze',
   logoUrl,
   ownerName,
 }: NexusWidgetProps) {
-  const [isOpen, setIsOpen] = useState(true);
+  // Avvio chiuso di default per non ostacolare la visuale al caricamento
+  const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const storageKey = `nexus_chat_${botId}`;
@@ -34,8 +36,8 @@ export default function NexusWidget({
 
   const maitreTitle = ownerName ? `Maître Virtuale di ${ownerName}` : `Maître Virtuale AI`;
 
-  // Validazione rigorosa del logo URL (evita immagini rotte)
-  const isValidLogo = logoUrl && typeof logoUrl === 'string' && logoUrl.trim().length > 5 && (logoUrl.startsWith('http') || logoUrl.startsWith('/'));
+  // Validazione del logo URL
+  const hasValidLogo = !imgError && Boolean(logoUrl && typeof logoUrl === 'string' && logoUrl.trim().length > 5);
 
   useEffect(() => {
     const savedHistory = sessionStorage.getItem(historyKey);
@@ -113,60 +115,82 @@ export default function NexusWidget({
 
   return (
     <>
-      {/* BOTTONE BUBBLE FLUTTUANTE A SINISTRA (SOPRA IL PRIVILEGE CLUB) */}
+      {/* BOTTONE FLUTTUANTE POSIZIONATO SOPRA IL PULSANTE 'INVITO RISERVA DI CANTINA' */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-20 left-4 sm:left-5 z-50 w-16 h-16 rounded-full bg-[#0a0a10] border-2 text-white flex items-center justify-center shadow-2xl transition-transform hover:scale-110 active:scale-95 cursor-pointer overflow-hidden"
+          className="fixed bottom-28 sm:bottom-32 left-4 sm:left-5 z-50 w-16 h-16 rounded-full bg-zinc-950/95 border-2 text-white flex items-center justify-center shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer overflow-hidden backdrop-blur-xl group"
           style={{
             borderColor: brandColor,
-            boxShadow: `0 0 25px ${brandColor}80`,
+            boxShadow: `0 0 25px ${brandColor}70, 0 10px 20px rgba(0,0,0,0.6)`,
           }}
           title={maitreTitle}
         >
-          {isValidLogo ? (
-            <img src={logoUrl!} alt="Logo" className="w-full h-full object-cover" />
-          ) : (
-            <ChefHat size={26} style={{ color: brandColor }} />
-          )}
+          <div className="relative w-full h-full flex items-center justify-center p-2 bg-gradient-to-br from-zinc-900 to-black">
+            {hasValidLogo ? (
+              <img
+                src={logoUrl!}
+                alt={nomeRistorante}
+                onError={() => setImgError(true)}
+                className="w-full h-full object-contain drop-shadow"
+              />
+            ) : (
+              <ChefHat size={28} style={{ color: brandColor }} className="drop-shadow" />
+            )}
+
+            {/* Badge luminoso 'Live' */}
+            <span
+              className="absolute top-1 right-1 w-3 h-3 rounded-full border-2 border-black animate-pulse"
+              style={{ backgroundColor: brandColor }}
+            />
+          </div>
         </button>
       )}
 
-      {/* FINESTRA CHAT APERTA A SINISTRA */}
+      {/* FINESTRA CHAT APERTA (ANCORATA SOPRA LA BARRA/PULSANTE RISERVA DI CANTINA) */}
       {isOpen && (
         <div
-          className="fixed z-50 inset-0 sm:inset-auto sm:bottom-20 sm:left-4 sm:w-[450px] sm:h-[640px] bg-[#08080d]/98 backdrop-blur-2xl border-0 sm:border-2 rounded-none sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl transition-all resize sm:resize-both"
+          className="fixed z-50 inset-0 sm:inset-auto sm:bottom-28 sm:left-4 sm:w-[450px] sm:h-[620px] bg-[#0c0d14]/98 backdrop-blur-3xl border-0 sm:border-2 rounded-none sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl transition-all resize sm:resize-both"
           style={{
-            borderColor: brandColor,
-            boxShadow: `0 0 35px ${brandColor}50`,
+            borderColor: `${brandColor}90`,
+            boxShadow: `0 0 40px ${brandColor}40, 0 20px 40px rgba(0,0,0,0.8)`,
             minWidth: '340px',
             maxWidth: '700px',
             minHeight: '480px',
-            maxHeight: '90vh',
+            maxHeight: '85vh',
           }}
         >
-          {/* HEADER CHAT CON LOGO REALE */}
+          {/* HEADER CHAT CON LOGO UFFICIALE */}
           <div
-            className="p-4 border-b border-white/10 flex items-center justify-between shrink-0 bg-[#0c0c14]"
+            className="p-4 border-b flex items-center justify-between shrink-0 bg-gradient-to-r from-zinc-950 via-[#13141f] to-zinc-950"
             style={{ borderBottomColor: `${brandColor}40` }}
           >
             <div className="flex items-center gap-3">
               <div
-                className="w-11 h-11 rounded-full flex items-center justify-center overflow-hidden shrink-0 bg-black"
-                style={{ backgroundColor: `${brandColor}20`, border: `2px solid ${brandColor}` }}
+                className="w-11 h-11 rounded-full flex items-center justify-center overflow-hidden shrink-0 bg-black/90 p-1.5 shadow-md"
+                style={{
+                  border: `2px solid ${brandColor}`,
+                  boxShadow: `0 0 12px ${brandColor}50`,
+                }}
               >
-                {isValidLogo ? (
-                  <img src={logoUrl!} alt={nomeRistorante} className="w-full h-full object-cover" />
+                {hasValidLogo ? (
+                  <img
+                    src={logoUrl!}
+                    alt={nomeRistorante}
+                    onError={() => setImgError(true)}
+                    className="w-full h-full object-contain"
+                  />
                 ) : (
                   <ChefHat size={22} style={{ color: brandColor }} />
                 )}
               </div>
               <div>
-                <h4 className="text-sm font-black text-white leading-tight">
-                  {maitreTitle}
+                <h4 className="text-sm font-black text-white leading-tight flex items-center gap-1.5">
+                  <span>{maitreTitle}</span>
+                  <Sparkles className="w-3.5 h-3.5" style={{ color: brandColor }} />
                 </h4>
                 <span className="text-[11px] font-bold flex items-center gap-1.5 mt-0.5" style={{ color: brandColor }}>
-                  <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: brandColor }} />
+                  <span className="w-2 h-2 rounded-full animate-ping" style={{ backgroundColor: brandColor }} />
                   {nomeRistorante}
                 </span>
               </div>
@@ -174,7 +198,7 @@ export default function NexusWidget({
 
             <button
               onClick={() => setIsOpen(false)}
-              className="text-gray-400 hover:text-white font-bold text-xl px-2 py-1 cursor-pointer"
+              className="text-zinc-400 hover:text-white font-bold text-lg w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition cursor-pointer"
             >
               ✕
             </button>
@@ -182,44 +206,56 @@ export default function NexusWidget({
 
           {/* PULSANTI SERVIZIO RAPIDI */}
           <div
-            className="p-2.5 bg-[#050508] border-b border-white/5 flex gap-2 overflow-x-auto shrink-0"
+            className="p-2.5 bg-zinc-950/90 border-b border-white/5 flex gap-2 overflow-x-auto shrink-0"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
             <button
               onClick={() => handleSend('Consigliami il menu perfetto per stasera')}
-              className="px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10 transition cursor-pointer"
+              className="px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap bg-white/5 hover:bg-white/15 text-zinc-200 border border-white/10 transition cursor-pointer"
             >
               🍷 Consigliami Menu
             </button>
             <button
               onClick={() => handleSend('Vorrei prenotare un tavolo')}
-              className="px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap text-black font-extrabold transition shadow-md cursor-pointer"
+              className="px-3.5 py-1.5 rounded-full text-xs font-black whitespace-nowrap text-slate-950 transition shadow-md cursor-pointer"
               style={{ backgroundColor: brandColor }}
             >
               📅 Prenota Tavolo
             </button>
             <button
               onClick={() => handleSend('Avete opzioni senza glutine o celiachia?')}
-              className="px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10 transition cursor-pointer"
+              className="px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap bg-white/5 hover:bg-white/15 text-zinc-200 border border-white/10 transition cursor-pointer"
             >
               🌾 Allergeni
             </button>
           </div>
 
-          {/* MESSAGGI CHAT */}
-          <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-[#030306]">
+          {/* MESSAGGI CHAT CON LOGO SUL BOT */}
+          <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-gradient-to-b from-[#090a10] to-[#040407]">
             {messages.map((m, idx) => (
               <div
                 key={idx}
-                className={`flex flex-col ${
-                  m.sender === 'user' ? 'items-end' : 'items-start'
-                }`}
+                className={`flex gap-2.5 ${m.sender === 'user' ? 'justify-end' : 'justify-start items-start'}`}
               >
+                {/* Avatar Logo per il Bot */}
+                {m.sender === 'bot' && (
+                  <div
+                    className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center bg-black border p-1 mt-0.5 shadow"
+                    style={{ borderColor: `${brandColor}80` }}
+                  >
+                    {hasValidLogo ? (
+                      <img src={logoUrl!} alt="Logo" className="w-full h-full object-contain" />
+                    ) : (
+                      <ChefHat size={14} style={{ color: brandColor }} />
+                    )}
+                  </div>
+                )}
+
                 <div
-                  className={`max-w-[88%] p-3.5 rounded-2xl text-xs md:text-sm leading-relaxed ${
+                  className={`max-w-[85%] p-3.5 rounded-2xl text-xs md:text-sm leading-relaxed shadow-lg ${
                     m.sender === 'user'
-                      ? 'text-black font-extrabold rounded-br-none'
-                      : 'bg-[#12121c] text-gray-100 border border-white/10 rounded-bl-none'
+                      ? 'text-slate-950 font-extrabold rounded-br-none'
+                      : 'bg-[#151624] text-zinc-100 border border-white/10 rounded-tl-none'
                   }`}
                   style={{
                     backgroundColor: m.sender === 'user' ? brandColor : undefined,
@@ -235,8 +271,18 @@ export default function NexusWidget({
             ))}
 
             {isLoading && (
-              <div className="flex justify-start">
-                <div className="bg-[#12121c] border border-white/10 p-3 rounded-2xl text-xs text-gray-400 flex items-center gap-1.5">
+              <div className="flex items-center gap-2.5">
+                <div
+                  className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center bg-black border p-1 shadow"
+                  style={{ borderColor: `${brandColor}80` }}
+                >
+                  {hasValidLogo ? (
+                    <img src={logoUrl!} alt="Logo" className="w-full h-full object-contain" />
+                  ) : (
+                    <ChefHat size={14} style={{ color: brandColor }} />
+                  )}
+                </div>
+                <div className="bg-[#151624] border border-white/10 p-3 rounded-2xl rounded-tl-none text-xs text-zinc-400 flex items-center gap-1.5 shadow">
                   <span className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: brandColor }} />
                   <span className="w-2 h-2 rounded-full animate-bounce delay-100" style={{ backgroundColor: brandColor }} />
                   <span className="w-2 h-2 rounded-full animate-bounce delay-200" style={{ backgroundColor: brandColor }} />
@@ -247,19 +293,19 @@ export default function NexusWidget({
           </div>
 
           {/* INPUT TESTO */}
-          <div className="p-3 bg-[#0c0c14] border-t border-white/10 flex gap-2 shrink-0">
+          <div className="p-3 bg-zinc-950 border-t border-white/10 flex gap-2 shrink-0">
             <input
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
               placeholder="Scrivi al Maître..."
-              className="flex-1 bg-[#151522] border border-white/10 rounded-xl px-4 py-2.5 text-xs md:text-sm text-white outline-none focus:border-amber-500 transition"
+              className="flex-1 bg-[#151726] border border-white/10 rounded-xl px-4 py-2.5 text-xs md:text-sm text-white outline-none focus:border-amber-500 transition placeholder-zinc-500"
             />
             <button
               onClick={() => handleSend()}
               disabled={isLoading || !inputValue.trim()}
-              className="px-4 py-2.5 rounded-xl font-black text-black text-xs uppercase tracking-wider transition disabled:opacity-50 cursor-pointer"
+              className="px-4 py-2.5 rounded-xl font-black text-slate-950 text-xs uppercase tracking-wider transition disabled:opacity-50 cursor-pointer shadow-md"
               style={{ backgroundColor: brandColor }}
             >
               Invia

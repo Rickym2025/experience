@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { ChefHat, Sparkles } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 interface Message {
   sender: 'bot' | 'user';
@@ -10,6 +11,7 @@ interface Message {
 
 interface NexusWidgetProps {
   botId: string;
+  restaurantSlug?: string;
   brandColor?: string;
   nomeRistorante?: string;
   logoUrl?: string | null;
@@ -18,26 +20,71 @@ interface NexusWidgetProps {
 
 export default function NexusWidget({
   botId,
+  restaurantSlug,
   brandColor = '#d97706',
-  nomeRistorante = 'Locanda Venezze',
+  nomeRistorante = 'Ristorante',
   logoUrl,
   ownerName,
 }: NexusWidgetProps) {
-  // Avvio chiuso di default per non ostacolare la visuale al caricamento
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [currentLogo, setCurrentLogo] = useState<string | null>(logoUrl || null);
   const [imgError, setImgError] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const storageKey = `nexus_chat_${botId}`;
-  const historyKey = `nexus_history_${botId}`;
+  const effectiveSlug = restaurantSlug || botId;
+  const storageKey = `nexus_chat_${effectiveSlug}`;
+  const historyKey = `nexus_history_${effectiveSlug}`;
 
   const maitreTitle = ownerName ? `Maître Virtuale di ${ownerName}` : `Maître Virtuale AI`;
 
-  // Validazione del logo URL
-  const hasValidLogo = !imgError && Boolean(logoUrl && typeof logoUrl === 'string' && logoUrl.trim().length > 5);
+  // RECUPERO DINAMICO LOGO DA SUPABASE (SE NON PRESENTE NELLE PROPS)
+  useEffect(() => {
+    if (logoUrl) {
+      setCurrentLogo(logoUrl);
+      setImgError(false);
+      return;
+    }
+
+    async function fetchLogoFromSupabase() {
+      if (!effectiveSlug) return;
+      try {
+        let logoFound: string | null = null;
+        
+        // 1. Prova tabella taste_experience
+        const { data: dSingle } = await supabase
+          .from('taste_experience')
+          .select('logo_url')
+          .eq('slug', effectiveSlug)
+          .maybeSingle();
+
+        if (dSingle?.logo_url) {
+          logoFound = dSingle.logo_url;
+        } else {
+          // 2. Fallback su taste_experiences
+          const { data: dPlural } = await supabase
+            .from('taste_experiences')
+            .select('logo_url')
+            .eq('slug', effectiveSlug)
+            .maybeSingle();
+          if (dPlural?.logo_url) logoFound = dPlural.logo_url;
+        }
+
+        if (logoFound) {
+          setCurrentLogo(logoFound);
+          setImgError(false);
+        }
+      } catch (err) {
+        console.warn('Errore recupero logo:', err);
+      }
+    }
+
+    fetchLogoFromSupabase();
+  }, [logoUrl, effectiveSlug]);
+
+  const hasValidLogo = !imgError && Boolean(currentLogo && currentLogo.trim().length > 5);
 
   useEffect(() => {
     const savedHistory = sessionStorage.getItem(historyKey);
@@ -50,7 +97,7 @@ export default function NexusWidget({
     } else {
       initWelcomeMessages();
     }
-  }, [botId]);
+  }, [effectiveSlug]);
 
   const initWelcomeMessages = () => {
     const welcomeText = ownerName
@@ -89,7 +136,7 @@ export default function NexusWidget({
         body: JSON.stringify({
           message: text,
           sessionId: sessionId,
-          strutturaId: botId || 'nexus_landing',
+          strutturaId: botId || effectiveSlug,
         }),
       });
 
@@ -115,21 +162,21 @@ export default function NexusWidget({
 
   return (
     <>
-      {/* BOTTONE FLUTTUANTE POSIZIONATO SOPRA IL PULSANTE 'INVITO RISERVA DI CANTINA' */}
+      {/* BOTTONE FLUTTUANTE: Posizionato a bottom-28 (sm:bottom-32) SOPRA il pulsante 'Invito Riserva di Cantina' */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-28 sm:bottom-32 left-4 sm:left-5 z-50 w-16 h-16 rounded-full bg-zinc-950/95 border-2 text-white flex items-center justify-center shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer overflow-hidden backdrop-blur-xl group"
+          className="fixed bottom-28 sm:bottom-32 left-4 sm:left-5 z-50 w-16 h-16 rounded-full bg-zinc-950/95 border-2 text-white flex items-center justify-center shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer overflow-hidden backdrop-blur-2xl group"
           style={{
             borderColor: brandColor,
-            boxShadow: `0 0 25px ${brandColor}70, 0 10px 20px rgba(0,0,0,0.6)`,
+            boxShadow: `0 0 25px ${brandColor}70, 0 10px 25px rgba(0,0,0,0.7)`,
           }}
           title={maitreTitle}
         >
           <div className="relative w-full h-full flex items-center justify-center p-2 bg-gradient-to-br from-zinc-900 to-black">
             {hasValidLogo ? (
               <img
-                src={logoUrl!}
+                src={currentLogo!}
                 alt={nomeRistorante}
                 onError={() => setImgError(true)}
                 className="w-full h-full object-contain drop-shadow"
@@ -138,7 +185,7 @@ export default function NexusWidget({
               <ChefHat size={28} style={{ color: brandColor }} className="drop-shadow" />
             )}
 
-            {/* Badge luminoso 'Live' */}
+            {/* Indicatore verde/brand pulsante 'Live' */}
             <span
               className="absolute top-1 right-1 w-3 h-3 rounded-full border-2 border-black animate-pulse"
               style={{ backgroundColor: brandColor }}
@@ -147,17 +194,17 @@ export default function NexusWidget({
         </button>
       )}
 
-      {/* FINESTRA CHAT APERTA (ANCORATA SOPRA LA BARRA/PULSANTE RISERVA DI CANTINA) */}
+      {/* FINESTRA CHAT APERTA ANCH'ESSA SOPRA IL PULSANTE DI RISERVA */}
       {isOpen && (
         <div
           className="fixed z-50 inset-0 sm:inset-auto sm:bottom-28 sm:left-4 sm:w-[450px] sm:h-[620px] bg-[#0c0d14]/98 backdrop-blur-3xl border-0 sm:border-2 rounded-none sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl transition-all resize sm:resize-both"
           style={{
             borderColor: `${brandColor}90`,
-            boxShadow: `0 0 40px ${brandColor}40, 0 20px 40px rgba(0,0,0,0.8)`,
+            boxShadow: `0 0 45px ${brandColor}40, 0 20px 40px rgba(0,0,0,0.85)`,
             minWidth: '340px',
             maxWidth: '700px',
             minHeight: '480px',
-            maxHeight: '85vh',
+            maxHeight: '82vh',
           }}
         >
           {/* HEADER CHAT CON LOGO UFFICIALE */}
@@ -175,7 +222,7 @@ export default function NexusWidget({
               >
                 {hasValidLogo ? (
                   <img
-                    src={logoUrl!}
+                    src={currentLogo!}
                     alt={nomeRistorante}
                     onError={() => setImgError(true)}
                     className="w-full h-full object-contain"
@@ -237,14 +284,14 @@ export default function NexusWidget({
                 key={idx}
                 className={`flex gap-2.5 ${m.sender === 'user' ? 'justify-end' : 'justify-start items-start'}`}
               >
-                {/* Avatar Logo per il Bot */}
+                {/* Avatar Logo del Locale per il Maître */}
                 {m.sender === 'bot' && (
                   <div
                     className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center bg-black border p-1 mt-0.5 shadow"
                     style={{ borderColor: `${brandColor}80` }}
                   >
                     {hasValidLogo ? (
-                      <img src={logoUrl!} alt="Logo" className="w-full h-full object-contain" />
+                      <img src={currentLogo!} alt="Logo" className="w-full h-full object-contain" />
                     ) : (
                       <ChefHat size={14} style={{ color: brandColor }} />
                     )}
@@ -277,7 +324,7 @@ export default function NexusWidget({
                   style={{ borderColor: `${brandColor}80` }}
                 >
                   {hasValidLogo ? (
-                    <img src={logoUrl!} alt="Logo" className="w-full h-full object-contain" />
+                    <img src={currentLogo!} alt="Logo" className="w-full h-full object-contain" />
                   ) : (
                     <ChefHat size={14} style={{ color: brandColor }} />
                   )}

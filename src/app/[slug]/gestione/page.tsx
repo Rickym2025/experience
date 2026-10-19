@@ -17,7 +17,11 @@ import {
   X, 
   ExternalLink, 
   RefreshCw,
-  ChefHat
+  ChefHat,
+  Eye,
+  EyeOff,
+  Video,
+  Sparkles
 } from 'lucide-react';
 
 interface GestionePageProps {
@@ -50,6 +54,7 @@ export default function GestioneMenuPage(props: GestionePageProps) {
 
   const [experience, setExperience] = useState<TasteExperience | null>(null);
   const [items, setItems] = useState<MenuItem[]>([]);
+  const [locandaVideos, setLocandaVideos] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [pinInput, setPinInput] = useState('');
@@ -71,6 +76,7 @@ export default function GestioneMenuPage(props: GestionePageProps) {
     pairing_vino: '',
     storytelling: '',
     foto_url: '',
+    is_active: true,
     allergeni: [] as string[]
   });
 
@@ -94,6 +100,7 @@ export default function GestioneMenuPage(props: GestionePageProps) {
         }
 
         await reloadMenu();
+        await loadLocandaVideos3D();
       } catch (err) {
         console.error("Errore caricamento gestione:", err);
       } finally {
@@ -114,6 +121,36 @@ export default function GestioneMenuPage(props: GestionePageProps) {
 
     if (!error && menuData) {
       setItems(menuData as MenuItem[]);
+    }
+  }
+
+  // Recupera i video 3D associati da Locanda Digitale (Supabase Locanda)
+  async function loadLocandaVideos3D() {
+    try {
+      const res = await fetch(
+        `https://nnuhzrzoebudwyalevht.supabase.co/rest/v1/locanda_piatti?restaurant_slug=eq.${encodeURIComponent(slug)}&select=nome_piatto,video_url,foto_url&is_active=eq.true`,
+        {
+          headers: {
+            apikey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5udWh6cnpvZWJ1ZHd5YWxldmh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzMzUxMTMsImV4cCI6MjEwMzkxMTExM30.oYADAYynRXyQrfnTMgYUeXpIyML4YnS0VQp3y8HIdGU',
+            Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5udWh6cnpvZWJ1ZHd5YWxldmh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzMzUxMTMsImV4cCI6MjEwMzkxMTExM30.oYADAYynRXyQrfnTMgYUeXpIyML4YnS0VQp3y8HIdGU'
+          },
+          cache: 'no-store'
+        }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const map: Record<string, string> = {};
+        if (Array.isArray(data)) {
+          data.forEach(d => {
+            if (d.nome_piatto && d.video_url) {
+              map[d.nome_piatto.toLowerCase().trim()] = d.video_url;
+            }
+          });
+        }
+        setLocandaVideos(map);
+      }
+    } catch {
+      setLocandaVideos({});
     }
   }
 
@@ -156,12 +193,13 @@ export default function GestioneMenuPage(props: GestionePageProps) {
       pairing_vino: '',
       storytelling: '',
       foto_url: '',
+      is_active: true,
       allergeni: []
     });
     setIsModalOpen(true);
   }
 
-  function openEditModal(item: MenuItem) {
+  function openEditModal(item: MenuItem & { is_active?: boolean }) {
     setEditingItem(item);
     const isPresetCat = PRESET_CATEGORIES.includes(item.categoria);
     setFormData({
@@ -173,9 +211,25 @@ export default function GestioneMenuPage(props: GestionePageProps) {
       pairing_vino: item.pairing_vino || '',
       storytelling: item.storytelling || '',
       foto_url: item.foto_url || '',
+      is_active: item.is_active !== false,
       allergeni: Array.isArray(item.allergeni) ? item.allergeni : []
     });
     setIsModalOpen(true);
+  }
+
+  async function toggleActiveStatus(item: MenuItem & { is_active?: boolean }) {
+    const nextState = item.is_active === false ? true : false;
+    try {
+      const { error } = await supabase
+        .from('taste_menus')
+        .update({ is_active: nextState })
+        .eq('id', item.id);
+
+      if (error) throw error;
+      setItems(prev => prev.map(i => i.id === item.id ? { ...i, is_active: nextState } : i));
+    } catch (err: any) {
+      alert("Errore aggiornamento stato: " + (err.message || 'Riprova'));
+    }
   }
 
   function toggleAllergen(allergen: string) {
@@ -204,6 +258,7 @@ export default function GestioneMenuPage(props: GestionePageProps) {
       pairing_vino: formData.pairing_vino.trim() || null,
       storytelling: formData.storytelling.trim() || null,
       foto_url: formData.foto_url.trim() || null,
+      is_active: formData.is_active,
       allergeni: formData.allergeni
     };
 
@@ -261,21 +316,26 @@ export default function GestioneMenuPage(props: GestionePageProps) {
     return matchesCat && matchesSearch;
   });
 
+  // SCREEN 1: LOGIN AMMINISTRATORE
   if (!isAuthorized) {
     return (
-      <div className="min-h-screen bg-[#050508] text-white flex items-center justify-center p-4 font-sans selection:bg-amber-500 selection:text-black">
-        <div className="max-w-md w-full bg-zinc-950/90 border border-amber-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl space-y-6 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/40 flex items-center justify-center text-amber-400 mx-auto shadow-lg">
+      <div className="min-h-screen bg-[#050508] text-white flex items-center justify-center p-4 font-sans selection:bg-amber-500 selection:text-black relative overflow-hidden">
+        {/* Sfondo luminoso d'atmosfera */}
+        <div className="absolute inset-0 bg-cover bg-center opacity-30 scale-105 pointer-events-none" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=2000&q=80')" }} />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/85 to-[#050508] pointer-events-none" />
+
+        <div className="max-w-md w-full bg-zinc-950/90 border border-amber-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-2xl space-y-6 text-center relative z-10">
+          <div className="w-16 h-16 rounded-2xl bg-amber-500/15 border border-amber-500/40 flex items-center justify-center text-amber-400 mx-auto shadow-xl">
             <Lock className="w-8 h-8" />
           </div>
 
           <div>
-            <span className="text-xs font-mono font-bold uppercase tracking-widest text-amber-400">Area Direzione Locale</span>
+            <span className="text-xs font-mono font-bold uppercase tracking-widest text-amber-400">Area Direzione Ristorante</span>
             <h1 className="text-xl sm:text-2xl font-black font-serif text-white mt-1">
-              {experience?.nome_ristorante || 'Gestione Menu'}
+              {experience?.nome_ristorante || 'Console Gestione'}
             </h1>
-            <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
-              Inserisci il <strong>PIN Amministratore</strong> o il cellulare del locale per modificare portate, prezzi e abbinamenti vino.
+            <p className="text-xs text-zinc-300 mt-2 leading-relaxed">
+              Inserisci il <strong>PIN Amministratore</strong> o il cellulare del locale per gestire il menu stagionale.
             </p>
           </div>
 
@@ -286,7 +346,7 @@ export default function GestioneMenuPage(props: GestionePageProps) {
                 placeholder="PIN o Cellulare..."
                 value={pinInput}
                 onChange={e => setPinInput(e.target.value)}
-                className="w-full bg-black/60 border border-zinc-800 rounded-xl px-4 py-3.5 text-center text-white font-mono text-base font-bold focus:border-amber-500 focus:outline-none transition-colors"
+                className="w-full bg-black/70 border border-zinc-800 rounded-xl px-4 py-3.5 text-center text-white font-mono text-base font-bold focus:border-amber-500 focus:outline-none transition-colors"
                 autoFocus
               />
               {authError && (
@@ -296,7 +356,7 @@ export default function GestioneMenuPage(props: GestionePageProps) {
 
             <button
               type="submit"
-              className="w-full py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl transition shadow-lg active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+              className="w-full py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl transition shadow-xl active:scale-95 cursor-pointer flex items-center justify-center gap-2"
             >
               <Unlock className="w-4 h-4" /> Sblocca Gestione Menu
             </button>
@@ -305,7 +365,7 @@ export default function GestioneMenuPage(props: GestionePageProps) {
           <div className="pt-2 border-t border-zinc-900">
             <a
               href={`/${slug}`}
-              className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-white transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors font-medium"
             >
               <ArrowLeft className="w-3.5 h-3.5" /> Torna alla Carta Pubblica
             </a>
@@ -315,24 +375,34 @@ export default function GestioneMenuPage(props: GestionePageProps) {
     );
   }
 
+  // SCREEN 2: CONSOLE DI GESTIONE VIVA & COLORATA
   return (
-    <div className="min-h-screen bg-[#050508] text-zinc-200 font-sans selection:bg-amber-500 selection:text-black pb-28">
-      <header className="sticky top-0 z-40 bg-zinc-950/95 border-b border-zinc-900 backdrop-blur-md px-4 py-3.5">
+    <div className="min-h-screen bg-[#04060a] text-zinc-200 font-sans selection:bg-amber-500 selection:text-black pb-28 relative">
+      {/* Sfondo d'atmosfera con immagine sfocata e coperta da gradiente */}
+      <div 
+        className="fixed inset-0 z-0 pointer-events-none bg-cover bg-center opacity-20 scale-105"
+        style={{ backgroundImage: `url('${experience?.cover_image || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=2000&q=80'}')` }}
+      />
+      <div className="fixed inset-0 z-0 pointer-events-none bg-gradient-to-b from-[#04060a]/90 via-[#04060a]/95 to-[#04060a]" />
+
+      {/* HEADER AMMINISTRATIVO */}
+      <header className="sticky top-0 z-40 bg-zinc-950/90 border-b border-zinc-950 backdrop-blur-xl px-4 py-3.5 shadow-2xl">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <a
               href={`/${slug}`}
-              className="w-9 h-9 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center transition shrink-0"
+              className="w-9 h-9 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white flex items-center justify-center transition shrink-0"
               title="Vedi Carta Pubblica"
             >
               <ArrowLeft className="w-4 h-4" />
             </a>
             <div className="min-w-0">
-              <h1 className="text-sm sm:text-base font-black text-white font-serif truncate">
-                {experience?.nome_ristorante || 'Gestione Menu'}
+              <h1 className="text-sm sm:text-base font-black text-white font-serif truncate flex items-center gap-2">
+                <span>{experience?.nome_ristorante || 'Gestione Menu'}</span>
+                <span className="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] font-mono font-bold uppercase">Stagionale Live</span>
               </h1>
-              <span className="text-[10px] font-mono text-amber-400 uppercase tracking-widest font-bold block">
-                Console Modifica Menu • {items.length} Voci Attive
+              <span className="text-[10px] font-mono text-zinc-400 block">
+                {items.length} Voci Totali • {items.filter(i => (i as any).is_active !== false).length} Attive al Tavolo
               </span>
             </div>
           </div>
@@ -343,7 +413,7 @@ export default function GestioneMenuPage(props: GestionePageProps) {
               className="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl transition shadow-lg flex items-center gap-1.5 active:scale-95 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Nuovo Piatto / Vino</span>
+              <span className="hidden sm:inline">Nuova Portata / Vino</span>
             </button>
 
             <button
@@ -357,7 +427,8 @@ export default function GestioneMenuPage(props: GestionePageProps) {
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-4 pt-6 pb-4 space-y-4">
+      {/* CONTROLLI, RICERCA & FILTRI */}
+      <div className="relative z-10 max-w-6xl mx-auto px-4 pt-6 pb-4 space-y-4">
         <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
           <div className="relative flex-1">
             <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
@@ -366,16 +437,16 @@ export default function GestioneMenuPage(props: GestionePageProps) {
               placeholder="Cerca piatto, vino o ingrediente..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full bg-zinc-900/80 border border-zinc-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:border-amber-500 outline-none transition-colors"
+              className="w-full bg-zinc-950/80 border border-zinc-800/80 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:border-amber-500 outline-none transition-colors backdrop-blur-md shadow-inner"
             />
           </div>
 
           <a
             href={`/${slug}`}
             target="_blank"
-            className="px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-xs font-bold flex items-center justify-center gap-2 transition"
+            className="px-4 py-2.5 rounded-xl bg-zinc-950/80 hover:bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs font-bold flex items-center justify-center gap-2 transition backdrop-blur-md shadow"
           >
-            <span>Vedi Carta Live</span>
+            <span>Vedi Carta Pubblica</span>
             <ExternalLink className="w-3.5 h-3.5 text-amber-400" />
           </a>
         </div>
@@ -385,10 +456,10 @@ export default function GestioneMenuPage(props: GestionePageProps) {
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer shadow ${
                 selectedCategory === cat
-                  ? 'bg-amber-500 text-slate-950 shadow-md'
-                  : 'bg-zinc-900/90 hover:bg-zinc-800 text-zinc-400 hover:text-white border border-zinc-800/80'
+                  ? 'bg-amber-500 text-slate-950 font-black'
+                  : 'bg-zinc-950/80 hover:bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800/80 backdrop-blur-md'
               }`}
             >
               {cat === 'all' ? `Tutte le Voci (${items.length})` : cat}
@@ -397,78 +468,132 @@ export default function GestioneMenuPage(props: GestionePageProps) {
         </div>
       </div>
 
-      <main className="max-w-6xl mx-auto px-4 space-y-3">
+      {/* LISTA DEI PIATTI E VINI CON ANTEPRIMA VIDEO 3D E TOGGLE ATTIVO/FUORI MENU */}
+      <main className="relative z-10 max-w-6xl mx-auto px-4 space-y-3">
         {loading ? (
           <div className="py-24 text-center text-zinc-500 text-xs font-bold flex flex-col items-center gap-2">
             <RefreshCw className="w-6 h-6 animate-spin text-amber-500" />
-            Caricamento voci del menu...
+            Caricamento voci del menu stagionale...
           </div>
         ) : filteredItems.length === 0 ? (
-          <div className="py-20 text-center text-zinc-500 bg-zinc-950/40 border border-zinc-900 rounded-3xl p-8 space-y-3">
+          <div className="py-20 text-center text-zinc-500 bg-zinc-950/60 border border-zinc-900/80 rounded-3xl p-8 space-y-3 backdrop-blur-xl">
             <ChefHat className="w-10 h-10 text-zinc-600 mx-auto" />
             <p className="text-sm font-bold text-zinc-400">Nessuna portata o vino trovato con i filtri attuali.</p>
             <button
               onClick={openAddModal}
-              className="px-4 py-2 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-300 font-bold text-xs"
+              className="px-4 py-2 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-300 font-bold text-xs cursor-pointer"
             >
               + Aggiungi il primo elemento
             </button>
           </div>
         ) : (
-          filteredItems.map(item => (
-            <div
-              key={item.id}
-              className="p-4 rounded-2xl bg-zinc-950/80 border border-zinc-900/80 hover:border-zinc-800 transition flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between shadow-lg"
-            >
-              <div className="flex-1 space-y-1.5 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-mono font-bold uppercase tracking-wider">
-                    {item.categoria}
-                  </span>
-                  <span className="text-xs text-zinc-500">•</span>
-                  <span className="text-base font-black text-amber-400 font-serif">
-                    €{Number(item.prezzo).toFixed(2)}
-                  </span>
+          filteredItems.map(item => {
+            const isActive = (item as any).is_active !== false;
+            const cleanNameKey = item.nome_piatto.toLowerCase().trim();
+            const video3DUrl = locandaVideos[cleanNameKey] || null;
+
+            return (
+              <div
+                key={item.id}
+                className={`p-4 rounded-2xl border transition flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between shadow-xl backdrop-blur-md ${
+                  isActive 
+                    ? 'bg-zinc-950/85 border-zinc-900/90 hover:border-zinc-800' 
+                    : 'bg-zinc-950/40 border-zinc-900/40 opacity-60'
+                }`}
+              >
+                {/* ANTEPRIMA VIDEO 3D DA LOCANDA DIGITALE (SE PRESENTE) O FOTO */}
+                <div className="w-16 h-24 rounded-xl overflow-hidden relative bg-black shrink-0 border border-amber-500/40 shadow-md flex items-center justify-center">
+                  {video3DUrl ? (
+                    <>
+                      <video src={video3DUrl} autoPlay loop muted playsinline className="w-full h-full object-cover" />
+                      <span className="absolute top-1 left-1 px-1 py-0.5 bg-amber-500 text-slate-950 font-black text-[7px] uppercase rounded shadow">3D 🎬</span>
+                    </>
+                  ) : item.foto_url ? (
+                    <img src={item.foto_url} alt={item.nome_piatto} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-zinc-900 flex items-center justify-center text-zinc-600 text-[10px] font-bold">Foto</div>
+                  )}
                 </div>
 
-                <h3 className="text-base font-bold font-serif text-white leading-tight">
-                  {item.nome_piatto}
-                </h3>
+                <div className="flex-1 space-y-1.5 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-mono font-bold uppercase tracking-wider">
+                      {item.categoria}
+                    </span>
+                    <span className="text-xs text-zinc-500">•</span>
+                    <span className="text-base font-black text-amber-400 font-serif">
+                      €{Number(item.prezzo).toFixed(2)}
+                    </span>
+                    
+                    {!isActive && (
+                      <span className="px-2 py-0.5 rounded bg-red-500/20 text-red-300 text-[9px] font-black uppercase tracking-wider">
+                        Fuori Menu (Nascosto)
+                      </span>
+                    )}
 
-                {item.descrizione && (
-                  <p className="text-xs text-zinc-400 line-clamp-2 leading-relaxed">
-                    {item.descrizione}
-                  </p>
-                )}
-
-                {item.pairing_vino && (
-                  <div className="flex items-center gap-1.5 text-xs text-purple-300 pt-0.5">
-                    <Wine className="w-3.5 h-3.5 shrink-0 text-purple-400" />
-                    <span className="truncate">{item.pairing_vino}</span>
+                    {video3DUrl && (
+                      <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 text-[9px] font-bold flex items-center gap-1">
+                        <Sparkles className="w-2.5 h-2.5" /> Spot 3D Collegato
+                      </span>
+                    )}
                   </div>
-                )}
-              </div>
 
-              <div className="flex items-center gap-2 self-end sm:self-center shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-zinc-900 w-full sm:w-auto justify-end">
-                <button
-                  onClick={() => openEditModal(item)}
-                  className="px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Edit3 className="w-3.5 h-3.5" /> Modifica
-                </button>
-                <button
-                  onClick={() => handleDelete(item)}
-                  className="px-3 py-1.5 rounded-xl bg-red-950/20 hover:bg-red-950/40 border border-red-500/20 text-red-400 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
-                  title="Elimina dal menu"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                  <h3 className="text-base font-bold font-serif text-white leading-tight">
+                    {item.nome_piatto}
+                  </h3>
+
+                  {item.descrizione && (
+                    <p className="text-xs text-zinc-400 line-clamp-2 leading-relaxed">
+                      {item.descrizione}
+                    </p>
+                  )}
+
+                  {item.pairing_vino && (
+                    <div className="flex items-center gap-1.5 text-xs text-purple-300 pt-0.5">
+                      <Wine className="w-3.5 h-3.5 shrink-0 text-purple-400" />
+                      <span className="truncate">{item.pairing_vino}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* PULSANTI DI GESTIONE STAGIONALE & MODIFICA */}
+                <div className="flex items-center gap-2 self-end sm:self-center shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-zinc-900/80 w-full sm:w-auto justify-end">
+                  {/* TOGGLE AGGIUNGI / TOGLI DA MENU */}
+                  <button
+                    onClick={() => toggleActiveStatus(item)}
+                    className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                      isActive 
+                        ? 'bg-emerald-950/30 hover:bg-emerald-950/50 border-emerald-500/30 text-emerald-300' 
+                        : 'bg-zinc-900 hover:bg-zinc-800 border-zinc-700 text-zinc-400'
+                    }`}
+                    title={isActive ? 'Nascondi temporaneamente dal menu' : 'Rendi visibile nel menu'}
+                  >
+                    {isActive ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                    <span>{isActive ? 'Nel Menu' : 'Escluso'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => openEditModal(item)}
+                    className="px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" /> Modifica
+                  </button>
+
+                  <button
+                    onClick={() => handleDelete(item)}
+                    className="px-3 py-1.5 rounded-xl bg-red-950/20 hover:bg-red-950/40 border border-red-500/20 text-red-400 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                    title="Elimina dal menu"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </main>
 
+      {/* MODALE INSERIMENTO / MODIFICA PIATTO */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-zinc-950 border border-zinc-800 rounded-3xl max-w-xl w-full p-6 sm:p-8 space-y-5 shadow-2xl relative max-h-[92vh] overflow-y-auto my-8">
@@ -570,14 +695,31 @@ export default function GestioneMenuPage(props: GestionePageProps) {
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1">Storytelling del Territorio (Opzionale)</label>
-                <textarea
-                  rows={2}
-                  placeholder="La provenienza locale dell'ingrediente, la barca da pesca o la tradizione lagunare..."
-                  value={formData.storytelling}
-                  onChange={e => setFormData({ ...formData, storytelling: e.target.value })}
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-amber-500 resize-none"
+                <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1">URL Foto (Opzionale)</label>
+                <input
+                  type="url"
+                  placeholder="https://images.unsplash.com/..."
+                  value={formData.foto_url}
+                  onChange={e => setFormData({ ...formData, foto_url: e.target.value })}
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-amber-500 font-mono"
                 />
+              </div>
+
+              {/* STATO STAGIONALE (ATTIVO / FUORI MENU) */}
+              <div className="flex items-center justify-between p-3.5 bg-zinc-900/60 border border-zinc-800 rounded-xl">
+                <div>
+                  <span className="font-bold text-white text-xs block">Visibile nel Menu al Tavolo</span>
+                  <span className="text-[11px] text-zinc-400">Se disattivato, il piatto risulterà "Fuori Menu" e nascosto agli ospiti.</span>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.is_active}
+                    onChange={e => setFormData({ ...formData, is_active: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                </label>
               </div>
 
               <div>

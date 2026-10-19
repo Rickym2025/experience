@@ -3,6 +3,7 @@
 import React, { useState, useEffect, use } from 'react';
 import { supabase } from '@/lib/supabase';
 import { MenuItem, TasteExperience } from '@/types/experience';
+import NexusWidget from '@/components/NexusWidget';
 import { 
   Plus, 
   Trash2, 
@@ -83,11 +84,24 @@ export default function GestioneMenuPage(props: GestionePageProps) {
     async function loadData() {
       setLoading(true);
       try {
-        const { data: expData } = await supabase
-          .from('taste_experiences')
+        // Query su taste_experience con fallback su taste_experiences per recuperare logo_url e cover_image
+        let expData: any = null;
+        const resSingle = await supabase
+          .from('taste_experience')
           .select('*')
           .eq('slug', slug)
-          .single();
+          .maybeSingle();
+
+        if (resSingle.data) {
+          expData = resSingle.data;
+        } else {
+          const resPlural = await supabase
+            .from('taste_experiences')
+            .select('*')
+            .eq('slug', slug)
+            .maybeSingle();
+          expData = resPlural.data;
+        }
 
         if (expData) {
           setExperience(expData as TasteExperience);
@@ -111,14 +125,28 @@ export default function GestioneMenuPage(props: GestionePageProps) {
   }, [slug]);
 
   async function reloadMenu() {
-    const { data: menuData, error } = await supabase
+    // Prova taste_menus con fallback su taste_menu
+    let menuData: any[] | null = null;
+    const { data: dPlural } = await supabase
       .from('taste_menus')
       .select('*')
       .eq('experience_slug', slug)
       .order('categoria', { ascending: true })
       .order('nome_piatto', { ascending: true });
 
-    if (!error && menuData) {
+    if (dPlural && dPlural.length > 0) {
+      menuData = dPlural;
+    } else {
+      const { data: dSample } = await supabase
+        .from('taste_menu')
+        .select('*')
+        .eq('experience_slug', slug)
+        .order('categoria', { ascending: true })
+        .order('nome_piatto', { ascending: true });
+      menuData = dSample;
+    }
+
+    if (menuData) {
       setItems(menuData as MenuItem[]);
     }
   }
@@ -314,6 +342,9 @@ export default function GestioneMenuPage(props: GestionePageProps) {
     return matchesCat && matchesSearch;
   });
 
+  const bgCoverUrl = experience?.cover_image || 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=2000&q=85';
+  const brandColor = experience?.brand_color || '#d97706';
+
   // SCHERMATA LOGIN SBLOCCO
   if (!isAuthorized) {
     return (
@@ -321,7 +352,7 @@ export default function GestioneMenuPage(props: GestionePageProps) {
         {/* Sfondo Gourmet Vivo con Bagliori di Cantina e Calore */}
         <div 
           className="absolute inset-0 bg-cover bg-center opacity-45 scale-105 pointer-events-none transition-all duration-700" 
-          style={{ backgroundImage: `url('${experience?.cover_image || 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=2000&q=85'}')` }} 
+          style={{ backgroundImage: `url('${bgCoverUrl}')` }} 
         />
         <div className="absolute inset-0 bg-gradient-to-tr from-[#05060b] via-[#0b0c16]/80 to-[#190e0c]/60 pointer-events-none" />
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-amber-500/20 rounded-full blur-[120px] pointer-events-none" />
@@ -378,21 +409,21 @@ export default function GestioneMenuPage(props: GestionePageProps) {
     );
   }
 
-  // SCHERMATA GESTIONALE PRINCIPALE (SFONDO VIVO CON ILLUMINAZIONE E COLORI)
+  // SCHERMATA GESTIONALE PRINCIPALE (SFONDO VIVO CHE ATTRAVERSA TUTTO IL MENU)
   return (
     <div className="min-h-screen bg-[#07080f] text-zinc-200 font-sans selection:bg-amber-500 selection:text-black pb-36 relative overflow-x-hidden">
-      {/* Sfondo Immagine ad Alta Atmosfera */}
+      {/* SFONDO FISSO AD ALTA DEFINIZIONE: Visibile sia nell'header che dietro a tutte le card del menu */}
       <div 
-        className="fixed inset-0 z-0 pointer-events-none bg-cover bg-center opacity-30 scale-105 transition-all duration-1000"
-        style={{ backgroundImage: `url('${experience?.cover_image || 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=2000&q=85'}')` }}
+        className="fixed inset-0 z-0 pointer-events-none bg-cover bg-center opacity-45 scale-105 transition-all duration-1000"
+        style={{ backgroundImage: `url('${bgCoverUrl}')` }}
       />
-      {/* Gradienti Caldi d'Atmosfera (Vino & Oro) */}
-      <div className="fixed inset-0 z-0 pointer-events-none bg-gradient-to-b from-[#07080f]/85 via-[#080a13]/90 to-[#07080f]" />
-      <div className="fixed top-0 right-1/4 w-[600px] h-[400px] bg-amber-500/10 rounded-full blur-[140px] pointer-events-none" />
-      <div className="fixed bottom-10 left-10 w-[500px] h-[500px] bg-rose-600/10 rounded-full blur-[150px] pointer-events-none" />
+      {/* Gradienti Caldi d'Atmosfera (Vignette leggera + bagliori d'oro e rosso rubino) */}
+      <div className="fixed inset-0 z-0 pointer-events-none bg-gradient-to-b from-black/55 via-[#080913]/70 to-[#040509]/85" />
+      <div className="fixed top-0 right-1/4 w-[600px] h-[400px] bg-amber-500/15 rounded-full blur-[140px] pointer-events-none" />
+      <div className="fixed bottom-10 left-10 w-[500px] h-[500px] bg-rose-600/15 rounded-full blur-[150px] pointer-events-none" />
 
-      {/* HEADER AMBRATO VIBRANTE */}
-      <header className="sticky top-0 z-40 bg-zinc-950/80 border-b border-amber-500/20 backdrop-blur-2xl px-4 py-3.5 shadow-[0_4px_25px_rgba(0,0,0,0.5)]">
+      {/* HEADER AMBRATO CON VETRO SATINATO */}
+      <header className="sticky top-0 z-40 bg-zinc-950/75 border-b border-amber-500/30 backdrop-blur-2xl px-4 py-3.5 shadow-[0_4px_30px_rgba(0,0,0,0.6)]">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <a
@@ -445,14 +476,14 @@ export default function GestioneMenuPage(props: GestionePageProps) {
               placeholder="Cerca piatto, vino o ingrediente..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full bg-zinc-950/80 border border-zinc-800/80 focus:border-amber-500 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 outline-none transition-all backdrop-blur-md shadow-inner"
+              className="w-full bg-zinc-950/75 border border-zinc-800/80 focus:border-amber-500 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-zinc-400 outline-none transition-all backdrop-blur-xl shadow-inner"
             />
           </div>
 
           <a
             href={`/${slug}`}
             target="_blank"
-            className="px-4 py-2.5 rounded-xl bg-zinc-950/80 hover:bg-zinc-900 border border-amber-500/30 text-amber-200 text-xs font-bold flex items-center justify-center gap-2 transition backdrop-blur-md shadow-lg hover:border-amber-400"
+            className="px-4 py-2.5 rounded-xl bg-zinc-950/75 hover:bg-zinc-900 border border-amber-500/30 text-amber-200 text-xs font-bold flex items-center justify-center gap-2 transition backdrop-blur-xl shadow-lg hover:border-amber-400"
           >
             <span>Vedi Carta Pubblica</span>
             <ExternalLink className="w-3.5 h-3.5 text-amber-400" />
@@ -468,7 +499,7 @@ export default function GestioneMenuPage(props: GestionePageProps) {
               className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer shadow-md ${
                 selectedCategory === cat
                   ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black shadow-[0_0_15px_rgba(245,158,11,0.4)]'
-                  : 'bg-zinc-950/80 hover:bg-zinc-900/90 text-zinc-300 hover:text-white border border-zinc-800 hover:border-amber-500/40 backdrop-blur-md'
+                  : 'bg-zinc-950/75 hover:bg-zinc-900/90 text-zinc-300 hover:text-white border border-zinc-800 hover:border-amber-500/40 backdrop-blur-xl'
               }`}
             >
               {cat === 'all' ? `Tutte le Voci (${items.length})` : cat}
@@ -477,17 +508,17 @@ export default function GestioneMenuPage(props: GestionePageProps) {
         </div>
       </div>
 
-      {/* LISTA PIATTI E VINI */}
+      {/* LISTA PIATTI E VINI (CARD SEMI-TRASPARENTI PER FAR RISPLENDERE IL BACKGROUND) */}
       <main className="relative z-10 max-w-6xl mx-auto px-4 space-y-3">
         {loading ? (
-          <div className="py-24 text-center text-zinc-400 text-xs font-bold flex flex-col items-center gap-2">
+          <div className="py-24 text-center text-zinc-300 text-xs font-bold flex flex-col items-center gap-2">
             <RefreshCw className="w-6 h-6 animate-spin text-amber-500" />
             Caricamento voci del menu stagionale...
           </div>
         ) : filteredItems.length === 0 ? (
-          <div className="py-20 text-center text-zinc-400 bg-zinc-950/70 border border-amber-500/20 rounded-3xl p-8 space-y-3 backdrop-blur-xl shadow-xl">
+          <div className="py-20 text-center text-zinc-300 bg-zinc-950/65 border border-amber-500/30 rounded-3xl p-8 space-y-3 backdrop-blur-xl shadow-xl">
             <ChefHat className="w-10 h-10 text-amber-500/60 mx-auto" />
-            <p className="text-sm font-bold text-zinc-300">Nessuna portata o vino trovato con i filtri attuali.</p>
+            <p className="text-sm font-bold text-zinc-200">Nessuna portata o vino trovato con i filtri attuali.</p>
             <button
               onClick={openAddModal}
               className="px-4 py-2 rounded-xl bg-amber-500/20 border border-amber-500/50 text-amber-300 font-bold text-xs cursor-pointer hover:bg-amber-500/30 transition shadow-sm"
@@ -504,13 +535,13 @@ export default function GestioneMenuPage(props: GestionePageProps) {
             return (
               <div
                 key={item.id}
-                className={`p-4 rounded-2xl border transition-all duration-300 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between shadow-xl backdrop-blur-xl ${
+                className={`p-4 rounded-2xl border transition-all duration-300 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between shadow-2xl backdrop-blur-xl ${
                   isActive 
-                    ? 'bg-gradient-to-r from-zinc-950/90 via-zinc-900/75 to-zinc-950/90 border-amber-500/20 hover:border-amber-500/40 hover:shadow-[0_4px_25px_rgba(217,119,6,0.15)]' 
-                    : 'bg-zinc-950/50 border-zinc-900/60 opacity-60'
+                    ? 'bg-zinc-950/65 hover:bg-zinc-900/75 border-amber-500/25 hover:border-amber-500/50 hover:shadow-[0_8px_30px_rgba(217,119,6,0.18)]' 
+                    : 'bg-zinc-950/40 border-zinc-900/60 opacity-60'
                 }`}
               >
-                <div className="w-16 h-24 rounded-xl overflow-hidden relative bg-black shrink-0 border border-amber-500/40 shadow-lg flex items-center justify-center">
+                <div className="w-16 h-24 rounded-xl overflow-hidden relative bg-black/80 shrink-0 border border-amber-500/40 shadow-lg flex items-center justify-center">
                   {video3DUrl ? (
                     <>
                       <video src={video3DUrl} autoPlay loop muted playsInline className="w-full h-full object-cover" />
@@ -519,7 +550,7 @@ export default function GestioneMenuPage(props: GestionePageProps) {
                   ) : item.foto_url ? (
                     <img src={item.foto_url} alt={item.nome_piatto} className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full bg-zinc-900/90 flex flex-col items-center justify-center text-amber-400/60 text-[10px] font-bold">
+                    <div className="w-full h-full bg-zinc-900/80 flex flex-col items-center justify-center text-amber-400/70 text-[10px] font-bold">
                       <Utensils className="w-4 h-4 mb-1 text-amber-500/50" />
                       Foto
                     </div>
@@ -528,10 +559,10 @@ export default function GestioneMenuPage(props: GestionePageProps) {
 
                 <div className="flex-1 space-y-1.5 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-mono font-bold uppercase tracking-wider">
+                    <span className="px-2 py-0.5 rounded-md bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] font-mono font-bold uppercase tracking-wider">
                       {item.categoria}
                     </span>
-                    <span className="text-xs text-zinc-500">•</span>
+                    <span className="text-xs text-zinc-400">•</span>
                     <span className="text-base font-black text-amber-400 font-serif">
                       €{Number(item.prezzo).toFixed(2)}
                     </span>
@@ -573,7 +604,7 @@ export default function GestioneMenuPage(props: GestionePageProps) {
                     className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
                       isActive 
                         ? 'bg-emerald-950/40 hover:bg-emerald-950/60 border-emerald-500/40 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.15)]' 
-                        : 'bg-zinc-900 hover:bg-zinc-800 border-zinc-700 text-zinc-400'
+                        : 'bg-zinc-900/80 hover:bg-zinc-800 border-zinc-700 text-zinc-400'
                     }`}
                     title={isActive ? 'Nascondi temporaneamente dal menu' : 'Rendi visibile nel menu'}
                   >
@@ -583,14 +614,14 @@ export default function GestioneMenuPage(props: GestionePageProps) {
 
                   <button
                     onClick={() => openEditModal(item)}
-                    className="px-3 py-1.5 rounded-xl bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800 hover:border-amber-500/40 text-zinc-200 hover:text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                    className="px-3 py-1.5 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 hover:border-amber-500/40 text-zinc-200 hover:text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
                   >
                     <Edit3 className="w-3.5 h-3.5 text-amber-400" /> Modifica
                   </button>
 
                   <button
                     onClick={() => handleDelete(item)}
-                    className="px-3 py-1.5 rounded-xl bg-rose-950/20 hover:bg-rose-950/50 border border-rose-500/30 text-rose-300 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                    className="px-3 py-1.5 rounded-xl bg-rose-950/30 hover:bg-rose-950/60 border border-rose-500/30 text-rose-300 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
                     title="Elimina dal menu"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -601,6 +632,16 @@ export default function GestioneMenuPage(props: GestionePageProps) {
           })
         )}
       </main>
+
+      {/* CHATBOT COLLEGATO AL RISTORANTE E LOGO DI SUPABASE */}
+      <NexusWidget
+        botId={experience?.nexus_bot_id || slug}
+        restaurantSlug={slug}
+        brandColor={brandColor}
+        nomeRistorante={experience?.nome_ristorante || 'Locanda'}
+        logoUrl={experience?.logo_url}
+        ownerName={experience?.owner_name}
+      />
 
       {/* MODALE DI AGGIUNTA / MODIFICA */}
       {isModalOpen && (

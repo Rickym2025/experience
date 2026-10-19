@@ -735,7 +735,7 @@ export default function GestioneMenuPage(props: GestionePageProps) {
               <div className="pt-3 border-t border-zinc-800/80 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(class => !class)} // <-- fix di chiusura modale
+                  onClick={() => setIsModalOpen(false)}
                   className="px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white font-bold transition cursor-pointer"
                 >
                   Annulla

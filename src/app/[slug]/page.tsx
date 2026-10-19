@@ -46,7 +46,7 @@ export default async function ExperiencePage({ params }: PageProps) {
     );
   }
 
-  // 2. Recupero Portate e Carta Vini da taste_menus (o taste_menu)
+  // 2. Recupero Portate e Carta Vini Reali
   let menuItems: MenuItem[] = [];
   const { data: mPlural } = await supabase
     .from('taste_menus')
@@ -79,31 +79,31 @@ export default async function ExperiencePage({ params }: PageProps) {
       ? 'font-mono'
       : 'font-sans';
 
-  // Immagine dinamica presa da Supabase (copertina del ristorante specifico)
+  // Immagine di copertina reale del ristorante (da Supabase, non hardcodata)
   const bgCoverUrl = expData.cover_image;
 
   return (
     <main className={`min-h-screen ${fontClass} text-zinc-100 selection:bg-amber-500 selection:text-black pb-28 relative overflow-x-hidden bg-[#07080f]`}>
       
-      {/* ─── 1. SFONDO DINAMICO DEL RISTORANTE (VISIBILE IN TUTTO IL MENU) ─── */}
+      {/* ─── SFONDO DINAMICO LEGATO ALLA COVER DEL RISTORANTE ─── */}
       {bgCoverUrl && (
         <div 
-          className="fixed inset-0 z-0 pointer-events-none bg-cover bg-center opacity-40 scale-105 transition-all duration-1000"
+          className="fixed inset-0 z-0 pointer-events-none bg-cover bg-center opacity-35 scale-105 transition-all duration-1000"
           style={{ backgroundImage: `url('${bgCoverUrl}')` }}
         />
       )}
 
-      {/* ─── 2. GRADIENTI E LUCI D'ATMOSFERA GOURMET ─── */}
-      <div className="fixed inset-0 z-0 pointer-events-none bg-gradient-to-b from-black/50 via-[#070810]/75 to-[#040508]/90" />
+      {/* ─── GRADIENTI CALDI E AMBIENT LIGHTING ─── */}
+      <div className="fixed inset-0 z-0 pointer-events-none bg-gradient-to-b from-black/55 via-[#070810]/75 to-[#040508]/90" />
       <div className="fixed top-1/4 right-0 w-[550px] h-[550px] bg-amber-500/15 rounded-full blur-[140px] pointer-events-none" />
       <div className="fixed bottom-1/3 left-0 w-[500px] h-[500px] bg-rose-600/15 rounded-full blur-[150px] pointer-events-none" />
 
-      {/* ─── 3. CONTENUTO DELLA PAGINA ─── */}
+      {/* ─── CONTENUTO DELLA PAGINA ─── */}
       <div className="relative z-10">
-        {/* Hero Multimediale */}
+        {/* Header Hero del Ristorante */}
         <HeroExperience experience={expData} />
 
-        {/* Menu Interattivo con Video 3D Integrati e Carrello al Tavolo */}
+        {/* Menu Interattivo con Schede Separate (Cucina vs Vini) */}
         <div className="max-w-5xl mx-auto px-4 py-8">
           <InteractiveMenu 
             items={menuItems} 
@@ -142,7 +142,7 @@ export default async function ExperiencePage({ params }: PageProps) {
         </footer>
       </div>
 
-      {/* Maître Virtuale & Sommelier AI (con Logo Supabase e posizionato sopra la riserva) */}
+      {/* Maître Virtuale & Sommelier AI */}
       <NexusWidget
         botId={expData.nexus_bot_id || expData.slug}
         restaurantSlug={expData.slug}

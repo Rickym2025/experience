@@ -2,11 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { MenuItem } from '@/types/experience';
-import { Wine, Sparkles, ShoppingBag, Send, X, ChefHat, Check } from 'lucide-react';
+import { Wine, Sparkles, ShoppingBag, Send, X, ChefHat, Play } from 'lucide-react';
 
 interface MenuProps {
   items: MenuItem[];
   brandColor: string;
+  slug?: string;
+  restaurantPhone?: string;
 }
 
 interface CartItem {
@@ -28,30 +30,31 @@ const safeArray = (data: any): string[] => {
   return [];
 };
 
-export default function InteractiveMenu({ items, brandColor }: MenuProps) {
+export default function InteractiveMenu({ items, brandColor, slug, restaurantPhone }: MenuProps) {
   const [selectedMood, setSelectedMood] = useState<string>('tutti');
   const [selectedCategory, setSelectedCategory] = useState<string>('tutti');
   const [activeModalItem, setActiveModalItem] = useState<MenuItem | null>(null);
 
-  // Mappa dei video 3D recuperati in tempo reale da Locanda Digitale
+  // Mappa dei video dei piatti recuperati dinamicamente
   const [locandaVideos, setLocandaVideos] = useState<Record<string, string>>({});
-  const [activeModalVideoUrl, setActiveModalVideoUrl] = useState<string | null>(null);
 
-  // Carrello per comanda al tavolo integrata
+  // Carrello per comanda al tavolo interna
   const [cart, setCart] = useState<Record<string, CartItem>>({});
   const [isOrderModalOpen, setIsOrderModalOpen] = useState<boolean>(false);
   const [tableNumber, setTableNumber] = useState<string>('Tavolo');
   const [orderNotes, setOrderNotes] = useState<string>('');
 
-  // Estrae lo slug dall'URL corrente (es. /ristorante-m4 ➔ ristorante-m4)
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    let effectiveSlug = slug;
+    if (!effectiveSlug && typeof window !== 'undefined') {
       const pathSegments = window.location.pathname.split('/').filter(Boolean);
-      const slug = pathSegments[0] || 'ristorante-m4';
+      effectiveSlug = pathSegments[0] || 'ristorante-m4';
+    }
 
-      // Interroga Supabase di Locanda Digitale per trovare i video 3D associati
+    if (effectiveSlug) {
+      // Se sono presenti video in Locanda Digitale, li recupera per incorporarli direttamente nella card
       fetch(
-        `https://nnuhzrzoebudwyalevht.supabase.co/rest/v1/locanda_piatti?restaurant_slug=eq.${encodeURIComponent(slug)}&select=nome_piatto,video_url&is_active=eq.true`,
+        `https://nnuhzrzoebudwyalevht.supabase.co/rest/v1/locanda_piatti?restaurant_slug=eq.${encodeURIComponent(effectiveSlug)}&select=nome_piatto,video_url&is_active=eq.true`,
         {
           headers: {
             apikey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5udWh6cnpvZWJ1ZHd5YWxldmh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzMzUxMTMsImV4cCI6MjEwMzkxMTExM30.oYADAYynRXyQrfnTMgYUeXpIyML4YnS0VQp3y8HIdGU',
@@ -74,20 +77,17 @@ export default function InteractiveMenu({ items, brandColor }: MenuProps) {
         })
         .catch(() => {});
     }
-  }, []);
+  }, [slug]);
 
   const categories = ['tutti', ...Array.from(new Set(items.map((i) => i.categoria)))];
 
   const filteredItems = items.filter((item) => {
     const matchCategory = selectedCategory === 'tutti' || item.categoria === selectedCategory;
     const itemOccasioni = safeArray(item.occasioni);
-    const matchMood =
-      selectedMood === 'tutti' ||
-      itemOccasioni.includes(selectedMood);
+    const matchMood = selectedMood === 'tutti' || itemOccasioni.includes(selectedMood);
     return matchCategory && matchMood;
   });
 
-  // Gestione Carrello
   const updateCart = (dish: MenuItem, change: number) => {
     setCart(prev => {
       const next = { ...prev };
@@ -109,8 +109,6 @@ export default function InteractiveMenu({ items, brandColor }: MenuProps) {
 
   const handleOpenModal = (item: MenuItem) => {
     setActiveModalItem(item);
-    const key = item.nome_piatto.toLowerCase().trim();
-    setActiveModalVideoUrl(locandaVideos[key] || item.foto_url || null);
   };
 
   const handleSendOrder = (e: React.FormEvent) => {
@@ -125,15 +123,17 @@ export default function InteractiveMenu({ items, brandColor }: MenuProps) {
     text += `━━━━━━━━━━━━━━━━━━━━\n💰 *TOTALE: €${totalCartPrice.toFixed(2)}*\n`;
     if (orderNotes.trim()) text += `📝 *Note:* ${orderNotes.trim()}\n`;
 
-    const cleanPhone = '393495258418'; // Sostituibile con il numero del locale
+    // Utilizza il numero effettivo del ristorante da Supabase oppure fallback
+    const rawPhone = restaurantPhone || '393495258418';
+    const cleanPhone = rawPhone.replace(/[^0-9]/g, '');
     window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`, '_blank');
     setIsOrderModalOpen(false);
   };
 
   return (
     <div className="w-full pb-32">
-      {/* SELETTORE MOOD / ESPERIENZA */}
-      <div className="bg-[#0b0b12] border border-white/10 rounded-3xl p-5 mb-8 shadow-2xl backdrop-blur-xl">
+      {/* ─── SELETTORE MOOD / ESPERIENZA (VETRO SATINATO) ─── */}
+      <div className="bg-zinc-950/65 border border-amber-500/20 hover:border-amber-500/40 rounded-3xl p-5 mb-8 shadow-2xl backdrop-blur-xl transition-all">
         <label className="block text-xs font-black uppercase tracking-widest text-amber-400 mb-3 text-center font-mono">
           ✨ Che esperienza cerchi stasera?
         </label>
@@ -150,8 +150,8 @@ export default function InteractiveMenu({ items, brandColor }: MenuProps) {
               onClick={() => setSelectedMood(mood.id)}
               className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 selectedMood === mood.id
-                  ? 'text-black font-black shadow-lg scale-105'
-                  : 'bg-white/5 text-gray-200 hover:bg-white/10 border border-white/10'
+                  ? 'text-slate-950 font-black shadow-[0_0_15px_rgba(245,158,11,0.4)] scale-105'
+                  : 'bg-white/5 text-zinc-200 hover:bg-white/10 border border-white/10'
               }`}
               style={{
                 backgroundColor: selectedMood === mood.id ? brandColor : undefined,
@@ -163,7 +163,7 @@ export default function InteractiveMenu({ items, brandColor }: MenuProps) {
         </div>
       </div>
 
-      {/* FILTRO CATEGORIE */}
+      {/* ─── FILTRO CATEGORIE ─── */}
       <div className="flex gap-2 overflow-x-auto pb-4 mb-8 scrollbar-none justify-center">
         {categories.map((cat) => (
           <button
@@ -171,8 +171,8 @@ export default function InteractiveMenu({ items, brandColor }: MenuProps) {
             onClick={() => setSelectedCategory(cat)}
             className={`px-5 py-2 rounded-full text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all border cursor-pointer ${
               selectedCategory === cat
-                ? 'bg-white text-black border-white shadow-lg scale-105'
-                : 'bg-[#12121c] text-gray-300 border-white/10 hover:border-white/30 hover:text-white'
+                ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 border-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.35)] scale-105'
+                : 'bg-zinc-950/70 text-zinc-300 border-white/10 hover:border-amber-500/40 hover:text-white backdrop-blur-md'
             }`}
           >
             {cat}
@@ -180,9 +180,9 @@ export default function InteractiveMenu({ items, brandColor }: MenuProps) {
         ))}
       </div>
 
-      {/* LISTA PIATTI CARD LUXURY */}
+      {/* ─── CARD PIATTI CON VIDEO 3D DIRETTAMENTE INTEGRATO ─── */}
       {filteredItems.length === 0 ? (
-        <div className="text-center py-12 text-gray-400 text-sm font-semibold">
+        <div className="text-center py-16 text-zinc-300 bg-zinc-950/60 border border-white/10 rounded-3xl p-8 backdrop-blur-xl">
           Nessun piatto trovato per i filtri selezionati.
         </div>
       ) : (
@@ -190,53 +190,77 @@ export default function InteractiveMenu({ items, brandColor }: MenuProps) {
           {filteredItems.map((item) => {
             const allergeniList = safeArray(item.allergeni);
             const keyName = item.nome_piatto.toLowerCase().trim();
-            const hasVideo3D = !!locandaVideos[keyName];
+            const videoUrl = locandaVideos[keyName];
+            const mediaUrl = videoUrl || item.foto_url;
             const itemQty = cart[item.id]?.qty || 0;
 
             return (
               <div
                 key={item.id}
-                className="bg-[#0c0c14] border border-white/10 hover:border-white/25 rounded-3xl p-5 transition-all flex flex-col justify-between group shadow-xl relative overflow-hidden"
+                className="bg-zinc-950/65 hover:bg-zinc-900/75 border border-amber-500/20 hover:border-amber-500/40 rounded-3xl p-5 transition-all duration-300 flex flex-col justify-between group shadow-2xl backdrop-blur-xl relative overflow-hidden"
               >
-                {/* Badge Video 3D Immersivo */}
-                {hasVideo3D && (
-                  <div className="absolute top-4 right-4 px-2.5 py-1 rounded-full bg-purple-500/25 border border-purple-500/50 text-purple-300 text-[10px] font-black uppercase tracking-widest flex items-center gap-1 shadow">
-                    <Sparkles size={11} /> Video 3D
-                  </div>
-                )}
-
                 <div>
-                  <div className="flex justify-between items-start gap-3 mb-2 pr-16">
-                    <h4 className="font-black text-white text-lg group-hover:text-amber-400 transition">
+                  {/* SE IL PIATTO HA UN VIDEO 3D O FOTO, VIENE MOSTRATO DIRETTAMENTE NELLA CARD */}
+                  {mediaUrl && (
+                    <div 
+                      onClick={() => handleOpenModal(item)}
+                      className="w-full h-48 rounded-2xl overflow-hidden relative bg-black/90 mb-4 border border-white/10 cursor-pointer group/media shadow-md"
+                    >
+                      {videoUrl ? (
+                        <>
+                          <video
+                            src={videoUrl}
+                            autoPlay
+                            loop
+                            muted
+                            playsInline
+                            className="w-full h-full object-cover group-hover/media:scale-105 transition-transform duration-500"
+                          />
+                          <div className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-full bg-black/70 backdrop-blur-md border border-amber-500/40 text-amber-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow">
+                            <Sparkles size={11} className="text-amber-400" /> Video
+                          </div>
+                        </>
+                      ) : (
+                        <img
+                          src={mediaUrl}
+                          alt={item.nome_piatto}
+                          className="w-full h-full object-cover group-hover/media:scale-105 transition-transform duration-500"
+                        />
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex justify-between items-start gap-3 mb-2">
+                    <h4 className="font-black text-white text-lg group-hover:text-amber-300 transition">
                       {item.nome_piatto}
                     </h4>
-                    <span className="font-black text-base px-3 py-1 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 shrink-0 font-mono">
+                    <span className="font-black text-base px-3 py-1 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 shrink-0 font-mono">
                       €{Number(item.prezzo).toFixed(2)}
                     </span>
                   </div>
 
                   {item.descrizione && (
-                    <p className="text-xs text-gray-300 leading-relaxed line-clamp-3 mb-4 font-normal">
+                    <p className="text-xs text-zinc-300 leading-relaxed line-clamp-3 mb-4 font-normal">
                       {item.descrizione}
                     </p>
                   )}
 
-                  {/* Wine Pairing Badge */}
+                  {/* Sommelier Pairing */}
                   {item.pairing_vino && (
-                    <div className="inline-flex items-center gap-2 text-xs text-purple-200 bg-purple-500/10 border border-purple-500/20 px-3.5 py-1.5 rounded-xl mb-4">
+                    <div className="inline-flex items-center gap-2 text-xs text-purple-200 bg-purple-500/15 border border-purple-500/30 px-3.5 py-1.5 rounded-xl mb-4">
                       <Wine size={14} className="text-purple-400 shrink-0" />
                       <span>Sommelier AI: <strong className="font-extrabold">{item.pairing_vino}</strong></span>
                     </div>
                   )}
                 </div>
 
-                {/* Footer Card: Allergeni, Storytelling e Comanda Rapida */}
-                <div className="pt-3 border-t border-white/5 flex justify-between items-center gap-2">
+                {/* Footer Card: Allergeni e Aggiunta al Carrello al Tavolo */}
+                <div className="pt-3 border-t border-white/10 flex justify-between items-center gap-2">
                   <div className="flex flex-wrap gap-1">
                     {allergeniList.map((all, idx) => (
                       <span
                         key={idx}
-                        className="text-[10px] uppercase font-bold text-gray-400 bg-white/5 border border-white/5 px-2 py-0.5 rounded-md"
+                        className="text-[10px] uppercase font-bold text-zinc-400 bg-white/5 border border-white/5 px-2 py-0.5 rounded-md"
                       >
                         {all}
                       </span>
@@ -246,22 +270,22 @@ export default function InteractiveMenu({ items, brandColor }: MenuProps) {
                   <div className="flex items-center gap-2.5 shrink-0">
                     <button
                       onClick={() => handleOpenModal(item)}
-                      className="text-xs font-extrabold text-amber-400 hover:underline flex items-center gap-1 cursor-pointer"
+                      className="text-xs font-bold text-amber-400 hover:text-amber-300 transition flex items-center gap-1 cursor-pointer"
                     >
-                      <span>📖 Story &amp; Video</span>
+                      <span>Dettagli</span>
                     </button>
 
-                    <div className="flex items-center gap-1 bg-black/80 border border-white/15 rounded-xl p-0.5">
+                    <div className="flex items-center gap-1 bg-black/80 border border-white/15 rounded-xl p-0.5 shadow">
                       <button
                         onClick={() => updateCart(item, -1)}
-                        className="w-7 h-7 rounded-lg bg-white/10 text-white font-bold flex items-center justify-center active:scale-90 cursor-pointer text-xs"
+                        className="w-7 h-7 rounded-lg bg-white/10 text-white font-bold flex items-center justify-center active:scale-90 cursor-pointer text-xs hover:bg-white/20 transition"
                       >
                         -
                       </button>
-                      <span className="text-xs font-mono font-black text-white px-1.5">{itemQty}</span>
+                      <span className="text-xs font-mono font-black text-white px-2">{itemQty}</span>
                       <button
                         onClick={() => updateCart(item, 1)}
-                        className="w-7 h-7 rounded-lg text-black font-black flex items-center justify-center active:scale-90 cursor-pointer text-xs"
+                        className="w-7 h-7 rounded-lg text-slate-950 font-black flex items-center justify-center active:scale-90 cursor-pointer text-xs shadow"
                         style={{ backgroundColor: brandColor }}
                       >
                         +
@@ -275,13 +299,13 @@ export default function InteractiveMenu({ items, brandColor }: MenuProps) {
         </div>
       )}
 
-      {/* ─── MODALE STORYTELLING & VIDEO 3D INTEGRATO ─── */}
+      {/* ─── MODALE DETTAGLI E STORYTELLING DEL PIATTO ─── */}
       {activeModalItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in">
-          <div className="bg-[#10101a] border border-white/20 rounded-3xl max-w-md w-full p-6 relative shadow-2xl max-h-[92vh] overflow-y-auto">
+          <div className="bg-[#0f1019] border border-amber-500/30 rounded-3xl max-w-md w-full p-6 relative shadow-2xl max-h-[92vh] overflow-y-auto">
             <button
               onClick={() => setActiveModalItem(null)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white font-bold text-xl cursor-pointer z-10 w-8 h-8 rounded-full bg-black/60 flex items-center justify-center"
+              className="absolute top-4 right-4 text-zinc-400 hover:text-white font-bold text-xl cursor-pointer z-10 w-8 h-8 rounded-full bg-black/70 flex items-center justify-center border border-white/10"
             >
               <X size={18} />
             </button>
@@ -298,41 +322,51 @@ export default function InteractiveMenu({ items, brandColor }: MenuProps) {
               </span>
             </div>
 
-            {/* MEDIA WRAPPER: MOSTRA IL VIDEO 3D IN AUTOPLAY 9:16 O LA FOTO */}
-            <div className="w-full aspect-[9/16] max-h-[42vh] rounded-2xl overflow-hidden relative bg-black border border-white/10 mb-4 flex items-center justify-center shadow-inner">
-              {activeModalVideoUrl && activeModalVideoUrl.includes('.mp4') ? (
-                <video
-                  src={activeModalVideoUrl}
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <img
-                  src={activeModalVideoUrl || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=800'}
-                  alt={activeModalItem.nome_piatto}
-                  className="w-full h-full object-cover"
-                />
-              )}
-            </div>
+            {/* Video o Foto Ingrandita */}
+            {(() => {
+              const modalKey = activeModalItem.nome_piatto.toLowerCase().trim();
+              const modalVideo = locandaVideos[modalKey];
+              const modalMedia = modalVideo || activeModalItem.foto_url;
+
+              if (!modalMedia) return null;
+
+              return (
+                <div className="w-full aspect-[9/16] max-h-[42vh] rounded-2xl overflow-hidden relative bg-black border border-white/10 mb-4 flex items-center justify-center shadow-inner">
+                  {modalVideo ? (
+                    <video
+                      src={modalVideo}
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <img
+                      src={modalMedia}
+                      alt={activeModalItem.nome_piatto}
+                      className="w-full h-full object-cover"
+                    />
+                  )}
+                </div>
+              );
+            })()}
 
             {activeModalItem.descrizione && (
-              <p className="text-xs text-gray-300 mb-3 leading-relaxed">
+              <p className="text-xs text-zinc-300 mb-3 leading-relaxed">
                 {activeModalItem.descrizione}
               </p>
             )}
 
             {activeModalItem.storytelling && (
-              <div className="bg-white/5 border border-white/10 p-3.5 rounded-2xl text-xs text-gray-200 leading-relaxed mb-3">
+              <div className="bg-white/5 border border-white/10 p-3.5 rounded-2xl text-xs text-zinc-200 leading-relaxed mb-3">
                 <span className="font-bold text-amber-400 block mb-1">🌱 Dietro le quinte dell&apos;ingrediente:</span>
                 {activeModalItem.storytelling}
               </div>
             )}
 
             {activeModalItem.pairing_vino && (
-              <div className="bg-purple-500/10 border border-purple-500/20 p-3.5 rounded-2xl text-xs text-purple-200 flex items-center gap-3 mb-4">
+              <div className="bg-purple-500/15 border border-purple-500/30 p-3.5 rounded-2xl text-xs text-purple-200 flex items-center gap-3 mb-4">
                 <Wine size={20} className="text-purple-400 shrink-0" />
                 <div>
                   <span className="font-bold block text-white">Abbinamento Sommelier AI:</span>
@@ -355,15 +389,15 @@ export default function InteractiveMenu({ items, brandColor }: MenuProps) {
         </div>
       )}
 
-      {/* ─── BARRA CARRELLO STICKY IN BASSO (SE CI SONO PIATTI SELEZIONATI) ─── */}
+      {/* ─── BARRA CARRELLO STICKY IN BASSO (SE PIATTI SELEZIONATI) ─── */}
       {totalCartCount > 0 && (
-        <aside className="fixed bottom-4 inset-x-4 z-40 max-w-lg mx-auto bg-[#0b0c15]/95 backdrop-blur-2xl border-2 border-amber-500/60 rounded-2xl p-4 shadow-[0_10px_40px_rgba(0,0,0,0.9)] text-white flex items-center justify-between gap-3 animate-in slide-in-from-bottom duration-300">
+        <aside className="fixed bottom-4 inset-x-4 z-40 max-w-lg mx-auto bg-zinc-950/95 backdrop-blur-2xl border-2 border-amber-500/60 rounded-2xl p-4 shadow-[0_10px_40px_rgba(0,0,0,0.9)] text-white flex items-center justify-between gap-3 animate-in slide-in-from-bottom duration-300">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 font-black flex items-center justify-center text-sm shadow">
               {totalCartCount}
             </div>
             <div>
-              <div className="text-xs text-stone-300 font-bold">Il tuo conto tavolo</div>
+              <div className="text-xs text-zinc-400 font-bold">Il tuo ordine al tavolo</div>
               <div className="text-lg font-black font-serif text-amber-400 font-mono">
                 €{totalCartPrice.toFixed(2)}
               </div>
@@ -380,15 +414,15 @@ export default function InteractiveMenu({ items, brandColor }: MenuProps) {
         </aside>
       )}
 
-      {/* ─── MODALE INVIO COMANDA WHATSAPP ─── */}
+      {/* ─── MODALE INVIO COMANDA SU WHATSAPP (AL NUMERO REALE DEL RISTORANTE) ─── */}
       {isOrderModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md p-4 flex items-center justify-center animate-in fade-in">
-          <div className="bg-[#0b0d14] border border-white/20 rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-4 relative shadow-2xl">
+          <div className="bg-[#0b0d14] border border-amber-500/30 rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-4 relative shadow-2xl">
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <h3 className="text-lg font-bold text-white font-serif flex items-center gap-2">
                 <ChefHat className="text-amber-400" /> Riepilogo Comanda Tavolo
               </h3>
-              <button onClick={() => setIsOrderModalOpen(false)} className="text-gray-400 hover:text-white cursor-pointer">
+              <button onClick={() => setIsOrderModalOpen(false)} className="text-zinc-400 hover:text-white cursor-pointer">
                 <X size={20} />
               </button>
             </div>
@@ -409,31 +443,31 @@ export default function InteractiveMenu({ items, brandColor }: MenuProps) {
             </div>
 
             <div className="pt-3 border-t border-white/10 flex justify-between items-center text-base font-bold">
-              <span className="text-gray-300">Totale Conto:</span>
+              <span className="text-zinc-300">Totale Conto:</span>
               <span className="text-amber-400 font-serif text-2xl font-black font-mono">€{totalCartPrice.toFixed(2)}</span>
             </div>
 
             <form onSubmit={handleSendOrder} className="space-y-3.5 pt-1">
               <div>
-                <label className="block text-xs font-bold text-gray-300 uppercase mb-1">Tavolo o Posizione</label>
+                <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">Tavolo o Posizione</label>
                 <input
                   type="text"
                   value={tableNumber}
                   onChange={(e) => setTableNumber(e.target.value)}
-                  placeholder="es. Tavolo 4, Veranda..."
-                  className="w-full bg-[#121522] border border-stone-700 rounded-xl px-4 py-3 text-sm text-white font-bold outline-none focus:border-amber-400"
+                  placeholder="es. Tavolo 4, Terrazza..."
+                  className="w-full bg-[#121522] border border-zinc-700 rounded-xl px-4 py-3 text-sm text-white font-bold outline-none focus:border-amber-400"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-300 uppercase mb-1">Note per lo Chef (Opzionali)</label>
+                <label className="block text-xs font-bold text-zinc-300 uppercase mb-1">Note per lo Chef (Opzionali)</label>
                 <input
                   type="text"
                   value={orderNotes}
                   onChange={(e) => setOrderNotes(e.target.value)}
                   placeholder="es. Senza glutine, cottura media..."
-                  className="w-full bg-[#121522] border border-stone-700 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
+                  className="w-full bg-[#121522] border border-zinc-700 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
                 />
               </div>
 

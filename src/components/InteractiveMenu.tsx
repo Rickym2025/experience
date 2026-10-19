@@ -16,6 +16,11 @@ interface CartItem {
   qty: number;
 }
 
+interface LocandaDish {
+  nome_piatto: string;
+  video_url: string;
+}
+
 const safeArray = (data: any): string[] => {
   if (!data) return [];
   if (Array.isArray(data)) return data;
@@ -40,15 +45,64 @@ const WINE_CATEGORIES = [
   'Distillati'
 ];
 
+// ─── ALGORITMO DI MATCHING AUTOMATICO LOCANDA ➔ EXPERIENCE ───
+function cleanString(str: string): string {
+  return str
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, '') // Rimuove testo tra parentesi es. (servito incovercià...)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Rimuove accenti
+    .replace(/[^a-z0-9\s]/g, ' ') // Rimuove punteggiatura
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getKeywords(str: string): string[] {
+  const stopWords = new Set(['con', 'di', 'del', 'della', 'delle', 'dei', 'e', 'ed', 'al', 'alla', 'alle', 'in', 'da', 'un', 'una', 'il', 'lo', 'la', 'i', 'gli', 'le']);
+  return cleanString(str)
+    .split(' ')
+    .filter(word => word.length > 2 && !stopWords.has(word));
+}
+
+function matchDishVideo(dishName: string, locandaItems: LocandaDish[]): string | null {
+  if (!dishName || locandaItems.length === 0) return null;
+
+  const cleanedDish = cleanString(dishName);
+  const dishKeywords = getKeywords(dishName);
+
+  // 1. Match diretto o inclusione diretta
+  for (const item of locandaItems) {
+    const cleanedLocanda = cleanString(item.nome_piatto);
+    if (cleanedLocanda === cleanedDish || cleanedLocanda.includes(cleanedDish) || cleanedDish.includes(cleanedLocanda)) {
+      return item.video_url;
+    }
+  }
+
+  // 2. Match per sovrapposizione semantica di parole chiave (token overlap)
+  let bestMatch: { video_url: string; score: number } | null = null;
+  for (const item of locandaItems) {
+    const locandaKeywords = getKeywords(item.nome_piatto);
+    if (locandaKeywords.length === 0 || dishKeywords.length === 0) continue;
+
+    const commonWords = dishKeywords.filter(k => locandaKeywords.includes(k));
+    const score = commonWords.length / Math.min(dishKeywords.length, locandaKeywords.length);
+
+    if (score >= 0.55 && (!bestMatch || score > bestMatch.score)) {
+      bestMatch = { video_url: item.video_url, score };
+    }
+  }
+
+  return bestMatch ? bestMatch.video_url : null;
+}
+
 export default function InteractiveMenu({ items, brandColor, slug, restaurantPhone }: MenuProps) {
-  // Tab Principale: 'cucina' oppure 'vini'
+  // Tab Principale: 'cucina' o 'vini'
   const [activeTab, setActiveTab] = useState<'cucina' | 'vini'>('cucina');
-  
   const [selectedCategory, setSelectedCategory] = useState<string>('tutte');
   const [activeModalItem, setActiveModalItem] = useState<MenuItem | null>(null);
 
-  // Mappa video 3D recuperati in tempo reale da Locanda Digitale
-  const [locandaVideos, setLocandaVideos] = useState<Record<string, string>>({});
+  // Array dei piatti con video recuperati da Locanda Digitale
+  const [locandaDishes, setLocandaDishes] = useState<LocandaDish[]>([]);
 
   // Carrello comanda tavolo
   const [cart, setCart] = useState<Record<string, CartItem>>({});
@@ -56,7 +110,7 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
   const [tableNumber, setTableNumber] = useState<string>('Tavolo');
   const [orderNotes, setOrderNotes] = useState<string>('');
 
-  // Recupera i video 3D da Locanda Digitale se presenti per questo ristorante
+  // Recupera i piatti attivi con video_url da Locanda Digitale
   useEffect(() => {
     let effectiveSlug = slug;
     if (!effectiveSlug && typeof window !== 'undefined') {
@@ -66,7 +120,7 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
 
     if (effectiveSlug) {
       fetch(
-        `https://nnuhzrzoebudwyalevht.supabase.co/rest/v1/locanda_piatti?restaurant_slug=eq.${encodeURIComponent(effectiveSlug)}&select=nome_piatto,video_url&is_active=eq.true`,
+        `https://nnuhzrzoebudwyalevht.supabase.co/rest/v1/locanda_piatti?or=(restaurant_slug.eq.${encodeURIComponent(effectiveSlug)},restaurant_slug.eq.ristorante-m4,restaurant_slug.eq.m4-restaurant)&select=nome_piatto,video_url&is_active=eq.true&video_url=not.is.null`,
         {
           headers: {
             apikey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5udWh6cnpvZWJ1ZHd5YWxldmh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzMzUxMTMsImV4cCI6MjEwMzkxMTExM30.oYADAYynRXyQrfnTMgYUeXpIyML4YnS0VQp3y8HIdGU',
@@ -78,31 +132,23 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
         .then(res => res.json())
         .then(data => {
           if (Array.isArray(data)) {
-            const map: Record<string, string> = {};
-            data.forEach((d: any) => {
-              if (d.nome_piatto && d.video_url) {
-                map[d.nome_piatto.toLowerCase().trim()] = d.video_url;
-              }
-            });
-            setLocandaVideos(map);
+            setLocandaDishes(data);
           }
         })
         .catch(() => {});
     }
   }, [slug]);
 
-  // Reset del filtro categoria al cambio tab
   const handleTabChange = (tab: 'cucina' | 'vini') => {
     setActiveTab(tab);
     setSelectedCategory('tutte');
   };
 
-  // Separa gli elementi tra Cucina e Vini in base alla categoria
+  // Separa gli elementi tra Cucina e Vini
   const foodItems = items.filter(i => !WINE_CATEGORIES.some(wc => wc.toLowerCase() === (i.categoria || '').toLowerCase().trim()));
   const wineItems = items.filter(i => WINE_CATEGORIES.some(wc => wc.toLowerCase() === (i.categoria || '').toLowerCase().trim()));
 
   const currentPool = activeTab === 'cucina' ? foodItems : wineItems;
-
   const currentCategories = ['tutte', ...Array.from(new Set(currentPool.map((i) => i.categoria)))];
 
   const filteredItems = currentPool.filter((item) => {
@@ -202,10 +248,9 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {filteredItems.map((item) => {
             const allergeniList = safeArray(item.allergeni);
-            const keyName = item.nome_piatto.toLowerCase().trim();
             
-            // Video 3D (se presente in Locanda) o foto reale salvata in DB
-            const videoUrl = locandaVideos[keyName];
+            // Rilevamento automatico video da Locanda Digitale tramite matching intelligente
+            const videoUrl = matchDishVideo(item.nome_piatto, locandaDishes);
             const realFotoUrl = item.foto_url && item.foto_url.trim().length > 0 ? item.foto_url : null;
             const hasMedia = Boolean(videoUrl || realFotoUrl);
 
@@ -218,11 +263,11 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
                 className="bg-zinc-950/65 hover:bg-zinc-900/75 border border-amber-500/20 hover:border-amber-500/40 rounded-3xl p-5 transition-all duration-300 flex flex-col justify-between group shadow-2xl backdrop-blur-xl relative overflow-hidden"
               >
                 <div>
-                  {/* MOSTRA IL MEDIA SOLO SE ESISTE REALMENTE (MAI IMMAGINI INVENTATE) */}
+                  {/* MOSTRA IL MEDIA SOLO SE ESISTE REALMENTE IL VIDEO 3D O LA FOTO REALE */}
                   {hasMedia && (
                     <div 
                       onClick={() => setActiveModalItem(item)}
-                      className="w-full h-48 rounded-2xl overflow-hidden relative bg-black/90 mb-4 border border-white/10 cursor-pointer group/media shadow-md"
+                      className="w-full h-52 rounded-2xl overflow-hidden relative bg-black/90 mb-4 border border-white/10 cursor-pointer group/media shadow-md"
                     >
                       {videoUrl ? (
                         <>
@@ -269,7 +314,7 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
                     </p>
                   )}
 
-                  {/* Sommelier Pairing (solo per piatti con abbinamento consigliato) */}
+                  {/* Sommelier Pairing (per portate di cucina con abbinamento suggerito) */}
                   {!isWine && item.pairing_vino && (
                     <div className="inline-flex items-center gap-2 text-xs text-purple-200 bg-purple-500/15 border border-purple-500/30 px-3.5 py-1.5 rounded-xl mb-4">
                       <Wine size={14} className="text-purple-400 shrink-0" />
@@ -349,10 +394,9 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
               </span>
             </div>
 
-            {/* Video o Foto Reale Ingrandita (SE ESISTENTE) */}
+            {/* Video 3D o Foto Reale Ingrandita (SE ESISTENTE) */}
             {(() => {
-              const modalKey = activeModalItem.nome_piatto.toLowerCase().trim();
-              const modalVideo = locandaVideos[modalKey];
+              const modalVideo = matchDishVideo(activeModalItem.nome_piatto, locandaDishes);
               const modalFoto = activeModalItem.foto_url && activeModalItem.foto_url.trim().length > 0 ? activeModalItem.foto_url : null;
 
               if (modalVideo) {

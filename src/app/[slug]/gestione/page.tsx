@@ -24,14 +24,6 @@ interface GestionePageProps {
   params: Promise<{ slug: string }> | { slug: string };
 }
 
-export default function GestioneMenuPage(props: GestionePageProps) {
-  // Risoluzione sicura di params sia che arrivi come Promise (Next.js 15) sia come oggetto
-  const resolvedParams = React.use(Promise.resolve(props.params));
-  const slug = resolvedParams.slug;
-
-  const [experience, setExperience] = useState<TasteExperience | null>(null);
-  const [items, setItems] = useState<MenuItem[]>([]);
-
 const COMMON_ALLERGENS = [
   'glutine', 'crostacei', 'uova', 'pesce', 'arachidi', 
   'soia', 'latte', 'frutta a guscio', 'sedano', 'senape', 
@@ -52,9 +44,8 @@ const PRESET_CATEGORIES = [
   'Aperitivi & Cocktail'
 ];
 
-export default function GestioneMenuPage({ params }: GestionePageProps) {
-  // Supporto React 19 / Next.js 15
-  const resolvedParams = typeof (params as any)?.then === 'function' ? use(params) : params;
+export default function GestioneMenuPage(props: GestionePageProps) {
+  const resolvedParams = use(Promise.resolve(props.params));
   const slug = resolvedParams.slug;
 
   const [experience, setExperience] = useState<TasteExperience | null>(null);
@@ -64,16 +55,13 @@ export default function GestioneMenuPage({ params }: GestionePageProps) {
   const [pinInput, setPinInput] = useState('');
   const [authError, setAuthError] = useState('');
 
-  // Filtri & Ricerca
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
 
-  // Modale Aggiungi / Modifica
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Form State
   const [formData, setFormData] = useState({
     categoria: 'Primi Piatti',
     custom_categoria: '',
@@ -86,12 +74,10 @@ export default function GestioneMenuPage({ params }: GestionePageProps) {
     allergeni: [] as string[]
   });
 
-  // 1. CARICAMENTO DATI INIZIALI
   useEffect(() => {
     async function loadData() {
       setLoading(true);
       try {
-        // Carica anagrafica ristorante
         const { data: expData } = await supabase
           .from('taste_experiences')
           .select('*')
@@ -102,13 +88,11 @@ export default function GestioneMenuPage({ params }: GestionePageProps) {
           setExperience(expData as TasteExperience);
         }
 
-        // Verifica autenticazione precedente memorizzata
         const savedAuth = localStorage.getItem(`experience_admin_${slug}`);
         if (savedAuth === 'true') {
           setIsAuthorized(true);
         }
 
-        // Carica voci del menu
         await reloadMenu();
       } catch (err) {
         console.error("Errore caricamento gestione:", err);
@@ -133,7 +117,6 @@ export default function GestioneMenuPage({ params }: GestionePageProps) {
     }
   }
 
-  // 2. AUTENTICAZIONE RISERVATA TITOLARE (Master PIN o Telefono Ristorante)
   function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setAuthError('');
@@ -162,7 +145,6 @@ export default function GestioneMenuPage({ params }: GestionePageProps) {
     setPinInput('');
   }
 
-  // 3. APERTURA MODALE AGGIUNGI / MODIFICA
   function openAddModal() {
     setEditingItem(null);
     setFormData({
@@ -205,7 +187,6 @@ export default function GestioneMenuPage({ params }: GestionePageProps) {
     }));
   }
 
-  // 4. SALVATAGGIO / AGGIORNAMENTO SU SUPABASE S1
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
@@ -228,7 +209,6 @@ export default function GestioneMenuPage({ params }: GestionePageProps) {
 
     try {
       if (editingItem) {
-        // UPDATE
         const { error } = await supabase
           .from('taste_menus')
           .update(payload)
@@ -236,7 +216,6 @@ export default function GestioneMenuPage({ params }: GestionePageProps) {
 
         if (error) throw error;
       } else {
-        // INSERT
         const { error } = await supabase
           .from('taste_menus')
           .insert([payload]);
@@ -253,7 +232,6 @@ export default function GestioneMenuPage({ params }: GestionePageProps) {
     }
   }
 
-  // 5. CANCELLAZIONE PIATTO
   async function handleDelete(item: MenuItem) {
     if (!confirm(`Sei sicuro di voler eliminare "${item.nome_piatto}" dal menu?`)) {
       return;
@@ -272,10 +250,8 @@ export default function GestioneMenuPage({ params }: GestionePageProps) {
     }
   }
 
-  // Categorie uniche presenti per il filtro
   const categoriesPresent = ['all', ...Array.from(new Set(items.map(i => i.categoria)))];
 
-  // Elementi filtrati
   const filteredItems = items.filter(i => {
     const matchesCat = selectedCategory === 'all' || i.categoria === selectedCategory;
     const matchesSearch = 
@@ -285,7 +261,6 @@ export default function GestioneMenuPage({ params }: GestionePageProps) {
     return matchesCat && matchesSearch;
   });
 
-  // SCREEN 1: SCHERMATA DI SBLOCCO RISERVATA
   if (!isAuthorized) {
     return (
       <div className="min-h-screen bg-[#050508] text-white flex items-center justify-center p-4 font-sans selection:bg-amber-500 selection:text-black">
@@ -340,10 +315,8 @@ export default function GestioneMenuPage({ params }: GestionePageProps) {
     );
   }
 
-  // SCREEN 2: CONSOLE DI GESTIONE PRINCIPALE
   return (
     <div className="min-h-screen bg-[#050508] text-zinc-200 font-sans selection:bg-amber-500 selection:text-black pb-28">
-      {/* HEADER AMMINISTRATIVO */}
       <header className="sticky top-0 z-40 bg-zinc-950/95 border-b border-zinc-900 backdrop-blur-md px-4 py-3.5">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
@@ -384,9 +357,7 @@ export default function GestioneMenuPage({ params }: GestionePageProps) {
         </div>
       </header>
 
-      {/* CONTROLLI, RICERCA & FILTRI */}
       <div className="max-w-6xl mx-auto px-4 pt-6 pb-4 space-y-4">
-        {/* BARRA DI RICERCA & LINK RAPIDO */}
         <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
           <div className="relative flex-1">
             <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
@@ -409,7 +380,6 @@ export default function GestioneMenuPage({ params }: GestionePageProps) {
           </a>
         </div>
 
-        {/* PILLOLE CATEGORIE */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
           {categoriesPresent.map(cat => (
             <button
@@ -427,7 +397,6 @@ export default function GestioneMenuPage({ params }: GestionePageProps) {
         </div>
       </div>
 
-      {/* LISTA DEI PIATTI E VINI */}
       <main className="max-w-6xl mx-auto px-4 space-y-3">
         {loading ? (
           <div className="py-24 text-center text-zinc-500 text-xs font-bold flex flex-col items-center gap-2">
@@ -480,7 +449,6 @@ export default function GestioneMenuPage({ params }: GestionePageProps) {
                 )}
               </div>
 
-              {/* AZIONI RAPIDE */}
               <div className="flex items-center gap-2 self-end sm:self-center shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-zinc-900 w-full sm:w-auto justify-end">
                 <button
                   onClick={() => openEditModal(item)}
@@ -501,7 +469,6 @@ export default function GestioneMenuPage({ params }: GestionePageProps) {
         )}
       </main>
 
-      {/* MODALE INSERIMENTO / MODIFICA PIATTO */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-zinc-950 border border-zinc-800 rounded-3xl max-w-xl w-full p-6 sm:p-8 space-y-5 shadow-2xl relative max-h-[92vh] overflow-y-auto my-8">
@@ -523,7 +490,6 @@ export default function GestioneMenuPage({ params }: GestionePageProps) {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-              {/* CATEGORIA & PREZZO */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-2">
                   <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1">Categoria *</label>
@@ -567,7 +533,6 @@ export default function GestioneMenuPage({ params }: GestionePageProps) {
                 </div>
               )}
 
-              {/* NOME PIATTO O ETICHETTA VINO */}
               <div>
                 <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1">Nome Piatto o Etichetta Vino *</label>
                 <input
@@ -580,7 +545,6 @@ export default function GestioneMenuPage({ params }: GestionePageProps) {
                 />
               </div>
 
-              {/* DESCRIZIONE */}
               <div>
                 <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1">Descrizione / Ingredienti</label>
                 <textarea
@@ -592,7 +556,6 @@ export default function GestioneMenuPage({ params }: GestionePageProps) {
                 />
               </div>
 
-              {/* ABBINAMENTO VINO (PAIRING) */}
               <div>
                 <label className="block text-[10px] font-bold uppercase text-purple-400 mb-1 flex items-center gap-1.5">
                   <Wine className="w-3.5 h-3.5" /> Vino Consigliato dal Sommelier AI
@@ -606,7 +569,6 @@ export default function GestioneMenuPage({ params }: GestionePageProps) {
                 />
               </div>
 
-              {/* STORYTELLING MATERIA PRIMA */}
               <div>
                 <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1">Storytelling del Territorio (Opzionale)</label>
                 <textarea
@@ -618,7 +580,6 @@ export default function GestioneMenuPage({ params }: GestionePageProps) {
                 />
               </div>
 
-              {/* ALLERGENI CHIP RAPIDE */}
               <div>
                 <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1.5">Allergeni Presenti</label>
                 <div className="flex flex-wrap gap-1.5">
@@ -643,7 +604,6 @@ export default function GestioneMenuPage({ params }: GestionePageProps) {
                 </div>
               </div>
 
-              {/* BOTTONI MODALE */}
               <div className="pt-3 border-t border-zinc-800/80 flex items-center justify-end gap-2.5">
                 <button
                   type="button"

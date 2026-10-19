@@ -49,10 +49,10 @@ const WINE_CATEGORIES = [
 function cleanString(str: string): string {
   return str
     .toLowerCase()
-    .replace(/\([^)]*\)/g, '') // Rimuove note tra parentesi es. (servito incovercià...)
+    .replace(/\([^)]*\)/g, '')
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Rimuove accenti
-    .replace(/[^a-z0-9\s]/g, ' ') // Rimuove punteggiatura
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -189,7 +189,7 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
     <div className="w-full pb-32">
       
       {/* ─── MACRO-SELETTORE: CUCINA VS CARTA DEI VINI ─── */}
-      <div className="max-w-md mx-auto mb-8 p-1.5 rounded-2xl bg-zinc-950/80 border border-amber-500/30 backdrop-blur-xl shadow-2xl flex gap-1.5">
+      <div className="max-w-md mx-auto mb-6 p-1.5 rounded-2xl bg-zinc-950/80 border border-amber-500/30 backdrop-blur-xl shadow-2xl flex gap-1.5">
         <button
           onClick={() => handleTabChange('cucina')}
           className={`flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
@@ -215,16 +215,16 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
         </button>
       </div>
 
-      {/* ─── FILTRO SOTTO-CATEGORIE ─── */}
-      <div className="flex gap-2 overflow-x-auto pb-4 mb-8 scrollbar-none justify-center">
+      {/* ─── FILTRO SOTTO-CATEGORIE MULTI-RIGA AD ALTA LEGGIBILITÀ (ZERO SCROLL, TUTTO VISIBILE) ─── */}
+      <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5 mb-8 max-w-4xl mx-auto px-2">
         {currentCategories.map((cat) => (
           <button
             key={cat}
             onClick={() => setSelectedCategory(cat)}
-            className={`px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all border cursor-pointer ${
+            className={`px-3.5 py-2 sm:px-4 sm:py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border cursor-pointer ${
               selectedCategory === cat
-                ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 border-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.4)] scale-105'
-                : 'bg-zinc-950/70 text-zinc-300 border-white/10 hover:border-amber-500/40 hover:text-white backdrop-blur-md'
+                ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black border-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.4)] scale-105'
+                : 'bg-zinc-950/75 hover:bg-zinc-900 text-zinc-300 border-white/10 hover:border-amber-500/40 hover:text-white backdrop-blur-md'
             }`}
           >
             {cat === 'tutte' ? (activeTab === 'cucina' ? 'Tutte le Portate' : 'Tutte le Etichette') : cat}
@@ -245,7 +245,7 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
             // Video 3D automatico da Locanda
             const videoUrl = matchDishVideo(item.nome_piatto, locandaDishes);
 
-            // FILTRO RIGOROSO UNSPLASH: Esclude qualsiasi immagine stock demo proveniente da Unsplash
+            // Esclude categoricamente le immagini demo di Unsplash
             const isUnsplash = (item.foto_url || '').toLowerCase().includes('unsplash.com');
             const realFotoUrl = item.foto_url && !isUnsplash && item.foto_url.trim().length > 0 ? item.foto_url : null;
             
@@ -288,7 +288,6 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
                             <Sparkles size={11} className="text-amber-400" /> Video 3D
                           </div>
 
-                          {/* Icona Play visiva: indica che si tratta di un video senza avviarlo in massa */}
                           <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover/media:bg-transparent transition-all pointer-events-none">
                             <div className="w-11 h-11 rounded-full bg-amber-500/90 text-slate-950 flex items-center justify-center shadow-xl group-hover/media:scale-110 transition-transform">
                               <Play size={18} fill="currentColor" className="ml-0.5" />
@@ -379,7 +378,7 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
         </div>
       )}
 
-      {/* ─── MODALE DETTAGLI (QUI VIENE RIPRODOTTO IL SINGOLO VIDEO IN AUTOPLAY SENZA CONSUMO DI RAM) ─── */}
+      {/* ─── MODALE DETTAGLI (UN SOLO VIDEO IN AUTOPLAY SENZA CONSUMO DI RAM) ─── */}
       {activeModalItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in">
           <div className="bg-[#0f1019] border border-amber-500/30 rounded-3xl max-w-md w-full p-6 relative shadow-2xl max-h-[92vh] overflow-y-auto">
@@ -402,7 +401,7 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
               </span>
             </div>
 
-            {/* Video 3D dedicato del singolo piatto o foto reale */}
+            {/* Video 3D dedicato o foto reale */}
             {(() => {
               const modalVideo = matchDishVideo(activeModalItem.nome_piatto, locandaDishes);
               const isUnsplash = (activeModalItem.foto_url || '').toLowerCase().includes('unsplash.com');

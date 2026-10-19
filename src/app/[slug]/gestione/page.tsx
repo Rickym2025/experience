@@ -20,7 +20,6 @@ import {
   ChefHat,
   Eye,
   EyeOff,
-  Video,
   Sparkles
 } from 'lucide-react';
 
@@ -124,7 +123,6 @@ export default function GestioneMenuPage(props: GestionePageProps) {
     }
   }
 
-  // Recupera i video 3D associati da Locanda Digitale (Supabase Locanda)
   async function loadLocandaVideos3D() {
     try {
       const res = await fetch(
@@ -316,11 +314,9 @@ export default function GestioneMenuPage(props: GestionePageProps) {
     return matchesCat && matchesSearch;
   });
 
-  // SCREEN 1: LOGIN AMMINISTRATORE
   if (!isAuthorized) {
     return (
       <div className="min-h-screen bg-[#050508] text-white flex items-center justify-center p-4 font-sans selection:bg-amber-500 selection:text-black relative overflow-hidden">
-        {/* Sfondo luminoso d'atmosfera */}
         <div className="absolute inset-0 bg-cover bg-center opacity-30 scale-105 pointer-events-none" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=2000&q=80')" }} />
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/85 to-[#050508] pointer-events-none" />
 
@@ -375,17 +371,14 @@ export default function GestioneMenuPage(props: GestionePageProps) {
     );
   }
 
-  // SCREEN 2: CONSOLE DI GESTIONE VIVA & COLORATA
   return (
     <div className="min-h-screen bg-[#04060a] text-zinc-200 font-sans selection:bg-amber-500 selection:text-black pb-28 relative">
-      {/* Sfondo d'atmosfera con immagine sfocata e coperta da gradiente */}
       <div 
         className="fixed inset-0 z-0 pointer-events-none bg-cover bg-center opacity-20 scale-105"
         style={{ backgroundImage: `url('${experience?.cover_image || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=2000&q=80'}')` }}
       />
       <div className="fixed inset-0 z-0 pointer-events-none bg-gradient-to-b from-[#04060a]/90 via-[#04060a]/95 to-[#04060a]" />
 
-      {/* HEADER AMMINISTRATIVO */}
       <header className="sticky top-0 z-40 bg-zinc-950/90 border-b border-zinc-950 backdrop-blur-xl px-4 py-3.5 shadow-2xl">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
@@ -427,7 +420,6 @@ export default function GestioneMenuPage(props: GestionePageProps) {
         </div>
       </header>
 
-      {/* CONTROLLI, RICERCA & FILTRI */}
       <div className="relative z-10 max-w-6xl mx-auto px-4 pt-6 pb-4 space-y-4">
         <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
           <div className="relative flex-1">
@@ -468,7 +460,6 @@ export default function GestioneMenuPage(props: GestionePageProps) {
         </div>
       </div>
 
-      {/* LISTA DEI PIATTI E VINI CON ANTEPRIMA VIDEO 3D E TOGGLE ATTIVO/FUORI MENU */}
       <main className="relative z-10 max-w-6xl mx-auto px-4 space-y-3">
         {loading ? (
           <div className="py-24 text-center text-zinc-500 text-xs font-bold flex flex-col items-center gap-2">
@@ -501,11 +492,10 @@ export default function GestioneMenuPage(props: GestionePageProps) {
                     : 'bg-zinc-950/40 border-zinc-900/40 opacity-60'
                 }`}
               >
-                {/* ANTEPRIMA VIDEO 3D DA LOCANDA DIGITALE (SE PRESENTE) O FOTO */}
                 <div className="w-16 h-24 rounded-xl overflow-hidden relative bg-black shrink-0 border border-amber-500/40 shadow-md flex items-center justify-center">
                   {video3DUrl ? (
                     <>
-                      <video src={video3DUrl} autoPlay loop muted playsinline className="w-full h-full object-cover" />
+                      <video src={video3DUrl} autoPlay loop muted playsInline className="w-full h-full object-cover" />
                       <span className="absolute top-1 left-1 px-1 py-0.5 bg-amber-500 text-slate-950 font-black text-[7px] uppercase rounded shadow">3D 🎬</span>
                     </>
                   ) : item.foto_url ? (
@@ -556,9 +546,7 @@ export default function GestioneMenuPage(props: GestionePageProps) {
                   )}
                 </div>
 
-                {/* PULSANTI DI GESTIONE STAGIONALE & MODIFICA */}
                 <div className="flex items-center gap-2 self-end sm:self-center shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-zinc-900/80 w-full sm:w-auto justify-end">
-                  {/* TOGGLE AGGIUNGI / TOGLI DA MENU */}
                   <button
                     onClick={() => toggleActiveStatus(item)}
                     className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
@@ -593,7 +581,6 @@ export default function GestioneMenuPage(props: GestionePageProps) {
         )}
       </main>
 
-      {/* MODALE INSERIMENTO / MODIFICA PIATTO */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-zinc-950 border border-zinc-800 rounded-3xl max-w-xl w-full p-6 sm:p-8 space-y-5 shadow-2xl relative max-h-[92vh] overflow-y-auto my-8">
@@ -705,7 +692,6 @@ export default function GestioneMenuPage(props: GestionePageProps) {
                 />
               </div>
 
-              {/* STATO STAGIONALE (ATTIVO / FUORI MENU) */}
               <div className="flex items-center justify-between p-3.5 bg-zinc-900/60 border border-zinc-800 rounded-xl">
                 <div>
                   <span className="font-bold text-white text-xs block">Visibile nel Menu al Tavolo</span>

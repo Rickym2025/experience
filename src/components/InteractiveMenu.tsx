@@ -35,7 +35,6 @@ const safeArray = (data: any): string[] => {
   return [];
 };
 
-// Categorie dedicate ai Vini e Cocktail
 const WINE_CATEGORIES = [
   'Bollicine & Champagne',
   'Vini Bianchi',
@@ -44,6 +43,15 @@ const WINE_CATEGORIES = [
   'Vini da Dessert',
   'Distillati'
 ];
+
+// ─── STILI ACCELERAZIONE GPU CHROME (IDENTICI A VISION E LOCANDA) ───
+const GPU_ACCEL_STYLE: React.CSSProperties = {
+  transform: 'translate3d(0, 0, 0)',
+  WebkitTransform: 'translate3d(0, 0, 0)',
+  backfaceVisibility: 'hidden',
+  WebkitBackfaceVisibility: 'hidden',
+  willChange: 'transform',
+};
 
 // ─── ALGORITMO NORMALIZZAZIONE & MATCHING LOCANDA ➔ EXPERIENCE ───
 function cleanString(str: string): string {
@@ -215,7 +223,7 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
         </button>
       </div>
 
-      {/* ─── FILTRO SOTTO-CATEGORIE MULTI-RIGA AD ALTA LEGGIBILITÀ (ZERO SCROLL, TUTTO VISIBILE) ─── */}
+      {/* ─── FILTRO SOTTO-CATEGORIE MULTI-RIGA VISIBILE (ZERO SCROLL) ─── */}
       <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5 mb-8 max-w-4xl mx-auto px-2">
         {currentCategories.map((cat) => (
           <button
@@ -241,8 +249,6 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {filteredItems.map((item) => {
             const allergeniList = safeArray(item.allergeni);
-            
-            // Video 3D automatico da Locanda
             const videoUrl = matchDishVideo(item.nome_piatto, locandaDishes);
 
             // Esclude categoricamente le immagini demo di Unsplash
@@ -250,7 +256,6 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
             const realFotoUrl = item.foto_url && !isUnsplash && item.foto_url.trim().length > 0 ? item.foto_url : null;
             
             const hasMedia = Boolean(videoUrl || realFotoUrl);
-
             const itemQty = cart[item.id]?.qty || 0;
             const isWine = WINE_CATEGORIES.some(wc => wc.toLowerCase() === (item.categoria || '').toLowerCase().trim());
 
@@ -260,19 +265,11 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
                 className="bg-zinc-950/65 hover:bg-zinc-900/75 border border-amber-500/20 hover:border-amber-500/40 rounded-3xl p-5 transition-all duration-300 flex flex-col justify-between group shadow-2xl backdrop-blur-xl relative overflow-hidden"
               >
                 <div>
-                  {/* MEDIA BOX: SOLO SE ESISTE IL VIDEO 3D O UNA FOTO AUTENTICA NON-UNSPLASH */}
+                  {/* MEDIA BOX: ACCELERATO GPU (ZERO SCATTI IN CHROME) */}
                   {hasMedia && (
                     <div 
                       onClick={() => setActiveModalItem(item)}
-                      onMouseEnter={(e) => {
-                        const video = e.currentTarget.querySelector('video');
-                        if (video) video.play().catch(() => {});
-                      }}
-                      onMouseLeave={(e) => {
-                        const video = e.currentTarget.querySelector('video');
-                        if (video) { video.pause(); video.currentTime = 0; }
-                      }}
-                      className="w-full h-52 rounded-2xl overflow-hidden relative bg-black/90 mb-4 border border-white/10 cursor-pointer group/media shadow-md"
+                      className="w-full h-52 rounded-2xl overflow-hidden relative bg-black mb-4 border border-white/10 cursor-pointer group/media shadow-md [isolation:isolate]"
                     >
                       {videoUrl ? (
                         <>
@@ -281,10 +278,12 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
                             muted
                             loop
                             playsInline
+                            autoPlay
                             preload="metadata"
-                            className="w-full h-full object-cover group-hover/media:scale-105 transition-transform duration-500"
+                            style={GPU_ACCEL_STYLE}
+                            className="pointer-events-none w-full h-full object-cover group-hover/media:scale-105 transition-transform duration-500"
                           />
-                          <div className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-full bg-black/75 backdrop-blur-md border border-amber-500/40 text-amber-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow z-10">
+                          <div className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-full bg-black/75 backdrop-blur-md border border-amber-500/40 text-amber-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow z-10 pointer-events-none">
                             <Sparkles size={11} className="text-amber-400" /> Video 3D
                           </div>
 
@@ -378,7 +377,7 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
         </div>
       )}
 
-      {/* ─── MODALE DETTAGLI (UN SOLO VIDEO IN AUTOPLAY SENZA CONSUMO DI RAM) ─── */}
+      {/* ─── MODALE DETTAGLI (GPU ACCELERATA A SCHERMO INTERO A 60 FPS) ─── */}
       {activeModalItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in">
           <div className="bg-[#0f1019] border border-amber-500/30 rounded-3xl max-w-md w-full p-6 relative shadow-2xl max-h-[92vh] overflow-y-auto">
@@ -401,7 +400,6 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
               </span>
             </div>
 
-            {/* Video 3D dedicato o foto reale */}
             {(() => {
               const modalVideo = matchDishVideo(activeModalItem.nome_piatto, locandaDishes);
               const isUnsplash = (activeModalItem.foto_url || '').toLowerCase().includes('unsplash.com');
@@ -409,13 +407,14 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
 
               if (modalVideo) {
                 return (
-                  <div className="w-full aspect-[9/16] max-h-[42vh] rounded-2xl overflow-hidden relative bg-black border border-white/10 mb-4 flex items-center justify-center shadow-inner">
+                  <div className="w-full aspect-[9/16] max-h-[42vh] rounded-2xl overflow-hidden relative bg-black border border-white/10 mb-4 flex items-center justify-center shadow-inner [isolation:isolate]">
                     <video
                       src={modalVideo}
                       autoPlay
                       loop
                       muted
                       playsInline
+                      style={GPU_ACCEL_STYLE}
                       className="w-full h-full object-cover"
                     />
                   </div>

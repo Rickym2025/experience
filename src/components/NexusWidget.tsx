@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { ChefHat, Wine } from 'lucide-react';
 
 interface Message {
   sender: 'bot' | 'user';
@@ -32,6 +33,9 @@ export default function NexusWidget({
   const historyKey = `nexus_history_${botId}`;
 
   const maitreTitle = ownerName ? `Maître Virtuale di ${ownerName}` : `Maître Virtuale AI`;
+
+  // Validazione rigorosa del logo URL (evita immagini rotte)
+  const isValidLogo = logoUrl && typeof logoUrl === 'string' && logoUrl.trim().length > 5 && (logoUrl.startsWith('http') || logoUrl.startsWith('/'));
 
   useEffect(() => {
     const savedHistory = sessionStorage.getItem(historyKey);
@@ -109,29 +113,29 @@ export default function NexusWidget({
 
   return (
     <>
-      {/* BOTTONE BUBBLE FLUTTUANTE SE CHIUSO */}
+      {/* BOTTONE BUBBLE FLUTTUANTE SE CHIUSO (POSIZIONATO A DESTRA PER NON SOVRAPPORSI AL PRIVILEGE CLUB) */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 left-6 z-50 w-16 h-16 rounded-full bg-[#0a0a10] border-2 text-white flex items-center justify-center shadow-2xl transition-transform hover:scale-110 active:scale-95"
+          className="fixed bottom-5 right-5 z-50 w-16 h-16 rounded-full bg-[#0a0a10] border-2 text-white flex items-center justify-center shadow-2xl transition-transform hover:scale-110 active:scale-95 cursor-pointer overflow-hidden"
           style={{
             borderColor: brandColor,
             boxShadow: `0 0 25px ${brandColor}80`,
           }}
           title={maitreTitle}
         >
-          {logoUrl ? (
-            <img src={logoUrl} alt="Logo" className="w-10 h-10 object-contain rounded-full" />
+          {isValidLogo ? (
+            <img src={logoUrl!} alt="Logo" className="w-full h-full object-cover" />
           ) : (
-            <span className="text-2xl">🍷</span>
+            <ChefHat size={26} style={{ color: brandColor }} />
           )}
         </button>
       )}
 
-      {/* FINESTRA CHAT RIDIMENSIONABILE (DESKTOP LARGHEZZA 450PX, MOBILE FULLSCREEN) */}
+      {/* FINESTRA CHAT RIDIMENSIONABILE */}
       {isOpen && (
         <div
-          className="fixed z-50 inset-0 sm:inset-auto sm:bottom-6 sm:left-6 sm:w-[450px] sm:h-[640px] bg-[#08080d]/98 backdrop-blur-2xl border-0 sm:border-2 rounded-none sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl transition-all resize sm:resize-both"
+          className="fixed z-50 inset-0 sm:inset-auto sm:bottom-5 sm:right-5 sm:w-[450px] sm:h-[640px] bg-[#08080d]/98 backdrop-blur-2xl border-0 sm:border-2 rounded-none sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl transition-all resize sm:resize-both"
           style={{
             borderColor: brandColor,
             boxShadow: `0 0 35px ${brandColor}50`,
@@ -141,7 +145,7 @@ export default function NexusWidget({
             maxHeight: '90vh',
           }}
         >
-          {/* HEADER CHAT CON LOGO VERO ED INTESTAZIONE */}
+          {/* HEADER CHAT CON LOGO SICURO O ICONA CHEF */}
           <div
             className="p-4 border-b border-white/10 flex items-center justify-between shrink-0 bg-[#0c0c14]"
             style={{ borderBottomColor: `${brandColor}40` }}
@@ -151,10 +155,10 @@ export default function NexusWidget({
                 className="w-11 h-11 rounded-full flex items-center justify-center overflow-hidden shrink-0"
                 style={{ backgroundColor: `${brandColor}20`, border: `2px solid ${brandColor}` }}
               >
-                {logoUrl ? (
-                  <img src={logoUrl} alt={nomeRistorante} className="w-full h-full object-cover" />
+                {isValidLogo ? (
+                  <img src={logoUrl!} alt={nomeRistorante} className="w-full h-full object-cover" />
                 ) : (
-                  <span className="text-xl">🍷</span>
+                  <ChefHat size={22} style={{ color: brandColor }} />
                 )}
               </div>
               <div>
@@ -170,39 +174,39 @@ export default function NexusWidget({
 
             <button
               onClick={() => setIsOpen(false)}
-              className="text-gray-400 hover:text-white font-bold text-xl px-2 py-1"
+              className="text-gray-400 hover:text-white font-bold text-xl px-2 py-1 cursor-pointer"
             >
               ✕
             </button>
           </div>
 
-          {/* PULSANTI SERVIZIO SENZA BARRE DI SCORRIMENTO */}
+          {/* PULSANTI SERVIZIO RAPIDI */}
           <div
             className="p-2.5 bg-[#050508] border-b border-white/5 flex gap-2 overflow-x-auto shrink-0"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
             <button
               onClick={() => handleSend('Consigliami il menu perfetto per stasera')}
-              className="px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10 transition"
+              className="px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10 transition cursor-pointer"
             >
               🍷 Consigliami Menu
             </button>
             <button
               onClick={() => handleSend('Vorrei prenotare un tavolo')}
-              className="px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap text-black font-extrabold transition shadow-md"
+              className="px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap text-black font-extrabold transition shadow-md cursor-pointer"
               style={{ backgroundColor: brandColor }}
             >
               📅 Prenota Tavolo
             </button>
             <button
               onClick={() => handleSend('Avete opzioni senza glutine o celiachia?')}
-              className="px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10 transition"
+              className="px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10 transition cursor-pointer"
             >
               🌾 Allergeni
             </button>
           </div>
 
-          {/* MESSAGGI CHAT CON FORMATTAZIONE LINK TELEFONO/WHATSAPP */}
+          {/* MESSAGGI CHAT */}
           <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-[#030306]">
             {messages.map((m, idx) => (
               <div
@@ -255,7 +259,7 @@ export default function NexusWidget({
             <button
               onClick={() => handleSend()}
               disabled={isLoading || !inputValue.trim()}
-              className="px-4 py-2.5 rounded-xl font-black text-black text-xs uppercase tracking-wider transition disabled:opacity-50"
+              className="px-4 py-2.5 rounded-xl font-black text-black text-xs uppercase tracking-wider transition disabled:opacity-50 cursor-pointer"
               style={{ backgroundColor: brandColor }}
             >
               Invia

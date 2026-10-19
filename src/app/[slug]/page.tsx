@@ -7,6 +7,9 @@ import NexusWidget from '@/components/NexusWidget';
 import UnlockBanner from '@/components/UnlockBanner';
 import PrivilegeClubModal from '@/components/PrivilegeClubModal';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 interface PageProps {
   params: Promise<{ slug: string }>;
 }

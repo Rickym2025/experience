@@ -113,11 +113,11 @@ export default function NexusWidget({
 
   return (
     <>
-      {/* BOTTONE BUBBLE FLUTTUANTE SE CHIUSO (POSIZIONATO A DESTRA PER NON SOVRAPPORSI AL PRIVILEGE CLUB) */}
+      {/* BOTTONE BUBBLE FLUTTUANTE A SINISTRA (SOPRA IL PRIVILEGE CLUB) */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-5 right-5 z-50 w-16 h-16 rounded-full bg-[#0a0a10] border-2 text-white flex items-center justify-center shadow-2xl transition-transform hover:scale-110 active:scale-95 cursor-pointer overflow-hidden"
+          className="fixed bottom-20 left-4 sm:left-5 z-50 w-16 h-16 rounded-full bg-[#0a0a10] border-2 text-white flex items-center justify-center shadow-2xl transition-transform hover:scale-110 active:scale-95 cursor-pointer overflow-hidden"
           style={{
             borderColor: brandColor,
             boxShadow: `0 0 25px ${brandColor}80`,
@@ -132,10 +132,10 @@ export default function NexusWidget({
         </button>
       )}
 
-      {/* FINESTRA CHAT RIDIMENSIONABILE */}
+      {/* FINESTRA CHAT APERTA A SINISTRA */}
       {isOpen && (
         <div
-          className="fixed z-50 inset-0 sm:inset-auto sm:bottom-5 sm:right-5 sm:w-[450px] sm:h-[640px] bg-[#08080d]/98 backdrop-blur-2xl border-0 sm:border-2 rounded-none sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl transition-all resize sm:resize-both"
+          className="fixed z-50 inset-0 sm:inset-auto sm:bottom-20 sm:left-4 sm:w-[450px] sm:h-[640px] bg-[#08080d]/98 backdrop-blur-2xl border-0 sm:border-2 rounded-none sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl transition-all resize sm:resize-both"
           style={{
             borderColor: brandColor,
             boxShadow: `0 0 35px ${brandColor}50`,
@@ -145,14 +145,14 @@ export default function NexusWidget({
             maxHeight: '90vh',
           }}
         >
-          {/* HEADER CHAT CON LOGO SICURO O ICONA CHEF */}
+          {/* HEADER CHAT CON LOGO REALE */}
           <div
             className="p-4 border-b border-white/10 flex items-center justify-between shrink-0 bg-[#0c0c14]"
             style={{ borderBottomColor: `${brandColor}40` }}
           >
             <div className="flex items-center gap-3">
               <div
-                className="w-11 h-11 rounded-full flex items-center justify-center overflow-hidden shrink-0"
+                className="w-11 h-11 rounded-full flex items-center justify-center overflow-hidden shrink-0 bg-black"
                 style={{ backgroundColor: `${brandColor}20`, border: `2px solid ${brandColor}` }}
               >
                 {isValidLogo ? (

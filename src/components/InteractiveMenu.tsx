@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { MenuItem } from '@/types/experience';
-import { Wine, Sparkles, ShoppingBag, Send, X, ChefHat, Play } from 'lucide-react';
+import { Wine, Sparkles, Send, X, ChefHat, UtensilsCrossed } from 'lucide-react';
 
 interface MenuProps {
   items: MenuItem[];
@@ -23,27 +23,40 @@ const safeArray = (data: any): string[] => {
     try {
       const parsed = JSON.parse(data);
       if (Array.isArray(parsed)) return parsed;
-    } catch (e) {
+    } catch {
       return data.split(',').map((s) => s.trim()).filter(Boolean);
     }
   }
   return [];
 };
 
+// Categorie dedicate ai Vini e Cocktail
+const WINE_CATEGORIES = [
+  'Bollicine & Champagne',
+  'Vini Bianchi',
+  'Vini Rossi',
+  'Aperitivi & Cocktail',
+  'Vini da Dessert',
+  'Distillati'
+];
+
 export default function InteractiveMenu({ items, brandColor, slug, restaurantPhone }: MenuProps) {
-  const [selectedMood, setSelectedMood] = useState<string>('tutti');
-  const [selectedCategory, setSelectedCategory] = useState<string>('tutti');
+  // Tab Principale: 'cucina' oppure 'vini'
+  const [activeTab, setActiveTab] = useState<'cucina' | 'vini'>('cucina');
+  
+  const [selectedCategory, setSelectedCategory] = useState<string>('tutte');
   const [activeModalItem, setActiveModalItem] = useState<MenuItem | null>(null);
 
-  // Mappa dei video dei piatti recuperati dinamicamente
+  // Mappa video 3D recuperati in tempo reale da Locanda Digitale
   const [locandaVideos, setLocandaVideos] = useState<Record<string, string>>({});
 
-  // Carrello per comanda al tavolo interna
+  // Carrello comanda tavolo
   const [cart, setCart] = useState<Record<string, CartItem>>({});
   const [isOrderModalOpen, setIsOrderModalOpen] = useState<boolean>(false);
   const [tableNumber, setTableNumber] = useState<string>('Tavolo');
   const [orderNotes, setOrderNotes] = useState<string>('');
 
+  // Recupera i video 3D da Locanda Digitale se presenti per questo ristorante
   useEffect(() => {
     let effectiveSlug = slug;
     if (!effectiveSlug && typeof window !== 'undefined') {
@@ -52,7 +65,6 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
     }
 
     if (effectiveSlug) {
-      // Se sono presenti video in Locanda Digitale, li recupera per incorporarli direttamente nella card
       fetch(
         `https://nnuhzrzoebudwyalevht.supabase.co/rest/v1/locanda_piatti?restaurant_slug=eq.${encodeURIComponent(effectiveSlug)}&select=nome_piatto,video_url&is_active=eq.true`,
         {
@@ -79,13 +91,22 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
     }
   }, [slug]);
 
-  const categories = ['tutti', ...Array.from(new Set(items.map((i) => i.categoria)))];
+  // Reset del filtro categoria al cambio tab
+  const handleTabChange = (tab: 'cucina' | 'vini') => {
+    setActiveTab(tab);
+    setSelectedCategory('tutte');
+  };
 
-  const filteredItems = items.filter((item) => {
-    const matchCategory = selectedCategory === 'tutti' || item.categoria === selectedCategory;
-    const itemOccasioni = safeArray(item.occasioni);
-    const matchMood = selectedMood === 'tutti' || itemOccasioni.includes(selectedMood);
-    return matchCategory && matchMood;
+  // Separa gli elementi tra Cucina e Vini in base alla categoria
+  const foodItems = items.filter(i => !WINE_CATEGORIES.some(wc => wc.toLowerCase() === (i.categoria || '').toLowerCase().trim()));
+  const wineItems = items.filter(i => WINE_CATEGORIES.some(wc => wc.toLowerCase() === (i.categoria || '').toLowerCase().trim()));
+
+  const currentPool = activeTab === 'cucina' ? foodItems : wineItems;
+
+  const currentCategories = ['tutte', ...Array.from(new Set(currentPool.map((i) => i.categoria)))];
+
+  const filteredItems = currentPool.filter((item) => {
+    return selectedCategory === 'tutte' || item.categoria === selectedCategory;
   });
 
   const updateCart = (dish: MenuItem, change: number) => {
@@ -107,10 +128,6 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
   const totalCartCount = cartItemsArray.reduce((acc, curr) => acc + curr.qty, 0);
   const totalCartPrice = cartItemsArray.reduce((acc, curr) => acc + (curr.qty * Number(curr.dish.prezzo || 0)), 0);
 
-  const handleOpenModal = (item: MenuItem) => {
-    setActiveModalItem(item);
-  };
-
   const handleSendOrder = (e: React.FormEvent) => {
     e.preventDefault();
     const table = tableNumber.trim() || 'Tavolo';
@@ -123,7 +140,6 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
     text += `━━━━━━━━━━━━━━━━━━━━\n💰 *TOTALE: €${totalCartPrice.toFixed(2)}*\n`;
     if (orderNotes.trim()) text += `📝 *Note:* ${orderNotes.trim()}\n`;
 
-    // Utilizza il numero effettivo del ristorante da Supabase oppure fallback
     const rawPhone = restaurantPhone || '393495258418';
     const cleanPhone = rawPhone.replace(/[^0-9]/g, '');
     window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`, '_blank');
@@ -132,67 +148,69 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
 
   return (
     <div className="w-full pb-32">
-      {/* ─── SELETTORE MOOD / ESPERIENZA (VETRO SATINATO) ─── */}
-      <div className="bg-zinc-950/65 border border-amber-500/20 hover:border-amber-500/40 rounded-3xl p-5 mb-8 shadow-2xl backdrop-blur-xl transition-all">
-        <label className="block text-xs font-black uppercase tracking-widest text-amber-400 mb-3 text-center font-mono">
-          ✨ Che esperienza cerchi stasera?
-        </label>
-        <div className="flex flex-wrap justify-center gap-2.5">
-          {[
-            { id: 'tutti', label: '🍽️ Tutti i Piatti' },
-            { id: 'romantica', label: '🕯️ Cena Romantica' },
-            { id: 'pesce', label: '🐟 Specialità Pesce' },
-            { id: 'veloce', label: '⚡ Pranzo Veloce' },
-            { id: 'gruppo', label: '🍷 In Compagnia' },
-          ].map((mood) => (
-            <button
-              key={mood.id}
-              onClick={() => setSelectedMood(mood.id)}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                selectedMood === mood.id
-                  ? 'text-slate-950 font-black shadow-[0_0_15px_rgba(245,158,11,0.4)] scale-105'
-                  : 'bg-white/5 text-zinc-200 hover:bg-white/10 border border-white/10'
-              }`}
-              style={{
-                backgroundColor: selectedMood === mood.id ? brandColor : undefined,
-              }}
-            >
-              {mood.label}
-            </button>
-          ))}
-        </div>
+      
+      {/* ─── MACRO-SELETTORE: CUCINA VS CARTA DEI VINI ─── */}
+      <div className="max-w-md mx-auto mb-8 p-1.5 rounded-2xl bg-zinc-950/80 border border-amber-500/30 backdrop-blur-xl shadow-2xl flex gap-1.5">
+        <button
+          onClick={() => handleTabChange('cucina')}
+          className={`flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            activeTab === 'cucina'
+              ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-[0_0_20px_rgba(245,158,11,0.4)] scale-[1.02]'
+              : 'text-zinc-400 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          <UtensilsCrossed size={16} />
+          <span>La Cucina ({foodItems.length})</span>
+        </button>
+
+        <button
+          onClick={() => handleTabChange('vini')}
+          className={`flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            activeTab === 'vini'
+              ? 'bg-gradient-to-r from-purple-600 to-amber-600 text-white shadow-[0_0_20px_rgba(168,85,247,0.4)] scale-[1.02]'
+              : 'text-zinc-400 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          <Wine size={16} />
+          <span>Vini &amp; Bar ({wineItems.length})</span>
+        </button>
       </div>
 
-      {/* ─── FILTRO CATEGORIE ─── */}
+      {/* ─── FILTRO SOTTO-CATEGORIE SPECIFICHE ─── */}
       <div className="flex gap-2 overflow-x-auto pb-4 mb-8 scrollbar-none justify-center">
-        {categories.map((cat) => (
+        {currentCategories.map((cat) => (
           <button
             key={cat}
             onClick={() => setSelectedCategory(cat)}
-            className={`px-5 py-2 rounded-full text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all border cursor-pointer ${
+            className={`px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all border cursor-pointer ${
               selectedCategory === cat
-                ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 border-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.35)] scale-105'
+                ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 border-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.4)] scale-105'
                 : 'bg-zinc-950/70 text-zinc-300 border-white/10 hover:border-amber-500/40 hover:text-white backdrop-blur-md'
             }`}
           >
-            {cat}
+            {cat === 'tutte' ? (activeTab === 'cucina' ? 'Tutte le Portate' : 'Tutte le Etichette') : cat}
           </button>
         ))}
       </div>
 
-      {/* ─── CARD PIATTI CON VIDEO 3D DIRETTAMENTE INTEGRATO ─── */}
+      {/* ─── GRIGLIA PORTATE O BOTTIGLIE ─── */}
       {filteredItems.length === 0 ? (
         <div className="text-center py-16 text-zinc-300 bg-zinc-950/60 border border-white/10 rounded-3xl p-8 backdrop-blur-xl">
-          Nessun piatto trovato per i filtri selezionati.
+          Nessuna voce trovata per questa categoria.
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {filteredItems.map((item) => {
             const allergeniList = safeArray(item.allergeni);
             const keyName = item.nome_piatto.toLowerCase().trim();
+            
+            // Video 3D (se presente in Locanda) o foto reale salvata in DB
             const videoUrl = locandaVideos[keyName];
-            const mediaUrl = videoUrl || item.foto_url;
+            const realFotoUrl = item.foto_url && item.foto_url.trim().length > 0 ? item.foto_url : null;
+            const hasMedia = Boolean(videoUrl || realFotoUrl);
+
             const itemQty = cart[item.id]?.qty || 0;
+            const isWine = WINE_CATEGORIES.some(wc => wc.toLowerCase() === (item.categoria || '').toLowerCase().trim());
 
             return (
               <div
@@ -200,10 +218,10 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
                 className="bg-zinc-950/65 hover:bg-zinc-900/75 border border-amber-500/20 hover:border-amber-500/40 rounded-3xl p-5 transition-all duration-300 flex flex-col justify-between group shadow-2xl backdrop-blur-xl relative overflow-hidden"
               >
                 <div>
-                  {/* SE IL PIATTO HA UN VIDEO 3D O FOTO, VIENE MOSTRATO DIRETTAMENTE NELLA CARD */}
-                  {mediaUrl && (
+                  {/* MOSTRA IL MEDIA SOLO SE ESISTE REALMENTE (MAI IMMAGINI INVENTATE) */}
+                  {hasMedia && (
                     <div 
-                      onClick={() => handleOpenModal(item)}
+                      onClick={() => setActiveModalItem(item)}
                       className="w-full h-48 rounded-2xl overflow-hidden relative bg-black/90 mb-4 border border-white/10 cursor-pointer group/media shadow-md"
                     >
                       {videoUrl ? (
@@ -217,12 +235,12 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
                             className="w-full h-full object-cover group-hover/media:scale-105 transition-transform duration-500"
                           />
                           <div className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-full bg-black/70 backdrop-blur-md border border-amber-500/40 text-amber-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow">
-                            <Sparkles size={11} className="text-amber-400" /> Video
+                            <Sparkles size={11} className="text-amber-400" /> Video 3D
                           </div>
                         </>
                       ) : (
                         <img
-                          src={mediaUrl}
+                          src={realFotoUrl!}
                           alt={item.nome_piatto}
                           className="w-full h-full object-cover group-hover/media:scale-105 transition-transform duration-500"
                         />
@@ -231,9 +249,15 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
                   )}
 
                   <div className="flex justify-between items-start gap-3 mb-2">
-                    <h4 className="font-black text-white text-lg group-hover:text-amber-300 transition">
-                      {item.nome_piatto}
-                    </h4>
+                    <div>
+                      <span className="text-[10px] uppercase font-mono font-bold tracking-widest text-amber-400/80 block mb-0.5">
+                        {item.categoria}
+                      </span>
+                      <h4 className="font-black text-white text-lg group-hover:text-amber-300 transition leading-tight">
+                        {item.nome_piatto}
+                      </h4>
+                    </div>
+
                     <span className="font-black text-base px-3 py-1 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 shrink-0 font-mono">
                       €{Number(item.prezzo).toFixed(2)}
                     </span>
@@ -245,16 +269,16 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
                     </p>
                   )}
 
-                  {/* Sommelier Pairing */}
-                  {item.pairing_vino && (
+                  {/* Sommelier Pairing (solo per piatti con abbinamento consigliato) */}
+                  {!isWine && item.pairing_vino && (
                     <div className="inline-flex items-center gap-2 text-xs text-purple-200 bg-purple-500/15 border border-purple-500/30 px-3.5 py-1.5 rounded-xl mb-4">
                       <Wine size={14} className="text-purple-400 shrink-0" />
-                      <span>Sommelier AI: <strong className="font-extrabold">{item.pairing_vino}</strong></span>
+                      <span>Sommelier: <strong className="font-extrabold">{item.pairing_vino}</strong></span>
                     </div>
                   )}
                 </div>
 
-                {/* Footer Card: Allergeni e Aggiunta al Carrello al Tavolo */}
+                {/* Footer Card */}
                 <div className="pt-3 border-t border-white/10 flex justify-between items-center gap-2">
                   <div className="flex flex-wrap gap-1">
                     {allergeniList.map((all, idx) => (
@@ -268,13 +292,16 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
                   </div>
 
                   <div className="flex items-center gap-2.5 shrink-0">
-                    <button
-                      onClick={() => handleOpenModal(item)}
-                      className="text-xs font-bold text-amber-400 hover:text-amber-300 transition flex items-center gap-1 cursor-pointer"
-                    >
-                      <span>Dettagli</span>
-                    </button>
+                    {(item.storytelling || hasMedia) && (
+                      <button
+                        onClick={() => setActiveModalItem(item)}
+                        className="text-xs font-bold text-amber-400 hover:text-amber-300 transition cursor-pointer"
+                      >
+                        Dettagli ➔
+                      </button>
+                    )}
 
+                    {/* Contatore Carrello */}
                     <div className="flex items-center gap-1 bg-black/80 border border-white/15 rounded-xl p-0.5 shadow">
                       <button
                         onClick={() => updateCart(item, -1)}
@@ -299,7 +326,7 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
         </div>
       )}
 
-      {/* ─── MODALE DETTAGLI E STORYTELLING DEL PIATTO ─── */}
+      {/* ─── MODALE DETTAGLI E STORYTELLING DEL PIATTO O DEL VINO ─── */}
       {activeModalItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in">
           <div className="bg-[#0f1019] border border-amber-500/30 rounded-3xl max-w-md w-full p-6 relative shadow-2xl max-h-[92vh] overflow-y-auto">
@@ -322,17 +349,15 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
               </span>
             </div>
 
-            {/* Video o Foto Ingrandita */}
+            {/* Video o Foto Reale Ingrandita (SE ESISTENTE) */}
             {(() => {
               const modalKey = activeModalItem.nome_piatto.toLowerCase().trim();
               const modalVideo = locandaVideos[modalKey];
-              const modalMedia = modalVideo || activeModalItem.foto_url;
+              const modalFoto = activeModalItem.foto_url && activeModalItem.foto_url.trim().length > 0 ? activeModalItem.foto_url : null;
 
-              if (!modalMedia) return null;
-
-              return (
-                <div className="w-full aspect-[9/16] max-h-[42vh] rounded-2xl overflow-hidden relative bg-black border border-white/10 mb-4 flex items-center justify-center shadow-inner">
-                  {modalVideo ? (
+              if (modalVideo) {
+                return (
+                  <div className="w-full aspect-[9/16] max-h-[42vh] rounded-2xl overflow-hidden relative bg-black border border-white/10 mb-4 flex items-center justify-center shadow-inner">
                     <video
                       src={modalVideo}
                       autoPlay
@@ -341,15 +366,21 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
                       playsInline
                       className="w-full h-full object-cover"
                     />
-                  ) : (
+                  </div>
+                );
+              }
+              if (modalFoto) {
+                return (
+                  <div className="w-full aspect-[16/9] max-h-[35vh] rounded-2xl overflow-hidden relative bg-black border border-white/10 mb-4 flex items-center justify-center shadow-inner">
                     <img
-                      src={modalMedia}
+                      src={modalFoto}
                       alt={activeModalItem.nome_piatto}
                       className="w-full h-full object-cover"
                     />
-                  )}
-                </div>
-              );
+                  </div>
+                );
+              }
+              return null;
             })()}
 
             {activeModalItem.descrizione && (
@@ -369,7 +400,7 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
               <div className="bg-purple-500/15 border border-purple-500/30 p-3.5 rounded-2xl text-xs text-purple-200 flex items-center gap-3 mb-4">
                 <Wine size={20} className="text-purple-400 shrink-0" />
                 <div>
-                  <span className="font-bold block text-white">Abbinamento Sommelier AI:</span>
+                  <span className="font-bold block text-white">Abbinamento Sommelier:</span>
                   <span>{activeModalItem.pairing_vino}</span>
                 </div>
               </div>
@@ -383,13 +414,13 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
               className="w-full py-3.5 rounded-xl font-black text-xs uppercase tracking-wider text-slate-950 shadow-lg cursor-pointer transition active:scale-95 flex items-center justify-center gap-2"
               style={{ backgroundColor: brandColor }}
             >
-              <ShoppingBag size={15} /> + Aggiungi al Conto del Tavolo
+              + Aggiungi al Conto del Tavolo
             </button>
           </div>
         </div>
       )}
 
-      {/* ─── BARRA CARRELLO STICKY IN BASSO (SE PIATTI SELEZIONATI) ─── */}
+      {/* ─── CARRELLO FLUTTUANTE AL TAVOLO ─── */}
       {totalCartCount > 0 && (
         <aside className="fixed bottom-4 inset-x-4 z-40 max-w-lg mx-auto bg-zinc-950/95 backdrop-blur-2xl border-2 border-amber-500/60 rounded-2xl p-4 shadow-[0_10px_40px_rgba(0,0,0,0.9)] text-white flex items-center justify-between gap-3 animate-in slide-in-from-bottom duration-300">
           <div className="flex items-center gap-3">
@@ -414,7 +445,7 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
         </aside>
       )}
 
-      {/* ─── MODALE INVIO COMANDA SU WHATSAPP (AL NUMERO REALE DEL RISTORANTE) ─── */}
+      {/* ─── MODALE INVIO COMANDA SU WHATSAPP ALLA CUCINA ─── */}
       {isOrderModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md p-4 flex items-center justify-center animate-in fade-in">
           <div className="bg-[#0b0d14] border border-amber-500/30 rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-4 relative shadow-2xl">
@@ -454,7 +485,7 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
                   type="text"
                   value={tableNumber}
                   onChange={(e) => setTableNumber(e.target.value)}
-                  placeholder="es. Tavolo 4, Terrazza..."
+                  placeholder="es. Tavolo 4, Veranda, Sala..."
                   className="w-full bg-[#121522] border border-zinc-700 rounded-xl px-4 py-3 text-sm text-white font-bold outline-none focus:border-amber-400"
                   required
                 />
@@ -466,7 +497,7 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
                   type="text"
                   value={orderNotes}
                   onChange={(e) => setOrderNotes(e.target.value)}
-                  placeholder="es. Senza glutine, cottura media..."
+                  placeholder="es. Senza cipolla, vino al secchiello..."
                   className="w-full bg-[#121522] border border-zinc-700 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
                 />
               </div>

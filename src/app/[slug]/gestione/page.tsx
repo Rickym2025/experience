@@ -21,8 +21,16 @@ import {
 } from 'lucide-react';
 
 interface GestionePageProps {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ slug: string }> | { slug: string };
 }
+
+export default function GestioneMenuPage(props: GestionePageProps) {
+  // Risoluzione sicura di params sia che arrivi come Promise (Next.js 15) sia come oggetto
+  const resolvedParams = React.use(Promise.resolve(props.params));
+  const slug = resolvedParams.slug;
+
+  const [experience, setExperience] = useState<TasteExperience | null>(null);
+  const [items, setItems] = useState<MenuItem[]>([]);
 
 const COMMON_ALLERGENS = [
   'glutine', 'crostacei', 'uova', 'pesce', 'arachidi', 

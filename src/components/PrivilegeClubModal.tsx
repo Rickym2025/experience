@@ -134,7 +134,7 @@ export default function PrivilegeClubModal({
   return (
     <>
       {/* ─── 1. BARRA / BADGE FLUTTUANTE IN BASSO A SINISTRA ─── */}
-      <div className="fixed bottom-5 left-5 z-40 flex items-center gap-2">
+      <div className="fixed bottom-20 left-4 sm:left-5 z-30 flex items-center gap-2">
         {/* Pulsante Club Privato */}
         <button
           onClick={() => setIsLeadModalOpen(true)}

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { MenuItem } from '@/types/experience';
 import { Wine, Sparkles, Send, X, ChefHat, UtensilsCrossed, Play } from 'lucide-react';
 
@@ -43,14 +44,6 @@ const WINE_CATEGORIES = [
   'Vini da Dessert',
   'Distillati'
 ];
-
-// Accelerazione GPU Chrome (identica a Vision e Locanda)
-const GPU_ACCEL_STYLE: React.CSSProperties = {
-  transform: 'translate3d(0, 0, 0)',
-  WebkitTransform: 'translate3d(0, 0, 0)',
-  backfaceVisibility: 'hidden',
-  willChange: 'transform',
-};
 
 function cleanString(str: string): string {
   return str
@@ -133,6 +126,19 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
         .catch(() => {});
     }
   }, [slug]);
+
+  // Scroll lock + ESC mentre il modale dettagli (col video) è aperto
+  useEffect(() => {
+    if (!activeModalItem) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setActiveModalItem(null); };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [activeModalItem]);
 
   const handleTabChange = (tab: 'cucina' | 'vini') => {
     setActiveTab(tab);
@@ -266,14 +272,16 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
                     >
                       {videoUrl ? (
                         <>
-                          <video
-                            src={videoUrl}
-                            preload="metadata"
-                            muted
-                            playsInline
-                            style={GPU_ACCEL_STYLE}
-                            className="pointer-events-none w-full h-full object-cover group-hover/media:scale-105 transition-transform duration-500"
-                          />
+                          {/* Con il modale aperto smontiamo le anteprime: libera i decoder video di Chrome */}
+                          {!activeModalItem && (
+                            <video
+                              src={`${videoUrl}#t=0.1`}
+                              preload="metadata"
+                              muted
+                              playsInline
+                              className="pointer-events-none w-full h-full object-cover"
+                            />
+                          )}
                           <div className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-full bg-black/80 backdrop-blur-md border border-amber-500/40 text-amber-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow z-10 pointer-events-none">
                             <Sparkles size={11} className="text-amber-400" /> Video 3D
                           </div>
@@ -369,9 +377,10 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
       )}
 
       {/* ─── MODALE DETTAGLI (VIDEO SINGOLO RIPRODOTTO FLUIDO A SCHERMO INTERO A 60 FPS) ─── */}
-      {activeModalItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/95 backdrop-blur-md animate-in fade-in">
-          <div className="bg-[#0f1019] border border-amber-500/30 rounded-3xl max-w-md w-full p-6 relative shadow-2xl max-h-[92vh] overflow-y-auto">
+      {/* Portal su body + overlay opaco SENZA backdrop-filter né animazioni: il blur attorno a un <video> costringe Chrome a ricalcolarlo a ogni frame */}
+      {activeModalItem && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black" onClick={() => setActiveModalItem(null)}>
+          <div onClick={e => e.stopPropagation()} className="bg-[#0f1019] border border-amber-500/30 rounded-3xl max-w-md w-full p-6 relative max-h-[92vh] overflow-y-auto">
             <button
               onClick={() => setActiveModalItem(null)}
               className="absolute top-4 right-4 text-zinc-400 hover:text-white font-bold text-xl cursor-pointer z-10 w-8 h-8 rounded-full bg-black/70 flex items-center justify-center border border-white/10"
@@ -398,7 +407,7 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
 
               if (modalVideo) {
                 return (
-                  <div className="w-full aspect-[9/16] max-h-[44vh] rounded-2xl overflow-hidden relative bg-black border border-white/10 mb-4 flex items-center justify-center shadow-inner [isolation:isolate]">
+                  <div className="w-full aspect-[9/16] max-h-[44vh] rounded-2xl overflow-hidden relative bg-black border border-white/10 mb-4 flex items-center justify-center">
                     <video
                       src={modalVideo}
                       autoPlay
@@ -406,7 +415,7 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
                       muted
                       playsInline
                       controls
-                      style={GPU_ACCEL_STYLE}
+                      preload="auto"
                       className="w-full h-full object-cover"
                     />
                   </div>
@@ -460,7 +469,8 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
               + Aggiungi al Conto del Tavolo
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ─── CARRELLO FLUTTUANTE AL TAVOLO ─── */}

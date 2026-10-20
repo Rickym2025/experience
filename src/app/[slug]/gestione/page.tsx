@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect, use, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { MenuItem, TasteExperience } from '@/types/experience';
 import NexusWidget from '@/components/NexusWidget';
@@ -22,7 +22,9 @@ import {
   Eye, 
   EyeOff, 
   Sparkles,
-  Play
+  Play,
+  Upload,
+  Film
 } from 'lucide-react';
 
 interface GestionePageProps {
@@ -49,6 +51,7 @@ const PRESET_CATEGORIES = [
 
 const LOCANDA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5udWh6cnpvZWJ1ZHd5YWxldmh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzMzUxMTMsImV4cCI6MjEwMzkxMTExM30.oYADAYynRXyQrfnTMgYUeXpIyML4YnS0VQp3y8HIdGU';
 
+// Normalizzazione e matching automatico intelligente
 function cleanString(str: string): string {
   return str
     .toLowerCase()
@@ -110,8 +113,13 @@ export default function GestioneMenuPage(props: GestionePageProps) {
   const [editingLocandaId, setEditingLocandaId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Modale anteprima video grande
+  // Modale video grande (60 FPS isolato)
   const [previewVideo, setPreviewVideo] = useState<{ url: string; title: string } | null>(null);
+
+  // Drag & drop upload state
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     categoria: 'Primi Piatti',
@@ -131,14 +139,12 @@ export default function GestioneMenuPage(props: GestionePageProps) {
     async function loadData() {
       setLoading(true);
       try {
-        let expData: any = null;
-        const resSingle = await supabase.from('taste_experience').select('*').eq('slug', slug).maybeSingle();
-        if (resSingle.data) {
-          expData = resSingle.data;
-        } else {
-          const resPlural = await supabase.from('taste_experiences').select('*').eq('slug', slug).maybeSingle();
-          expData = resPlural.data;
-        }
+        // Query diretta su taste_experiences (PLURALE) per eliminare l'errore 404
+        const { data: expData, error } = await supabase
+          .from('taste_experiences')
+          .select('*')
+          .eq('slug', slug)
+          .maybeSingle();
 
         if (expData) setExperience(expData as TasteExperience);
 
@@ -224,6 +230,48 @@ export default function GestioneMenuPage(props: GestionePageProps) {
     setIsAuthorized(false);
     localStorage.removeItem(`experience_admin_${slug}`);
     setPinInput('');
+  }
+
+  // GESTIONE UPLOAD VIDEO CON DRAG & DROP
+  async function handleVideoFileUpload(file: File) {
+    if (!file) return;
+    if (!file.type.includes('video')) {
+      alert("Seleziona un file video valido (.mp4, .mov, .webm).");
+      return;
+    }
+
+    setUploadingVideo(true);
+    try {
+      const fileExt = file.name.split('.').pop() || 'mp4';
+      const fileName = `${slug}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+
+      let uploadBucket = 'videos';
+      let { data, error } = await supabase.storage.from('videos').upload(fileName, file, { upsert: true });
+
+      if (error) {
+        const fb1 = await supabase.storage.from('taste-videos').upload(fileName, file, { upsert: true });
+        if (!fb1.error) { data = fb1.data; uploadBucket = 'taste-videos'; error = null; }
+      }
+      if (error) {
+        const fb2 = await supabase.storage.from('experience').upload(fileName, file, { upsert: true });
+        if (!fb2.error) { data = fb2.data; uploadBucket = 'experience'; error = null; }
+      }
+      if (error) {
+        const fb3 = await supabase.storage.from('public').upload(fileName, file, { upsert: true });
+        if (!fb3.error) { data = fb3.data; uploadBucket = 'public'; error = null; }
+      }
+
+      if (!error && data) {
+        const { data: pubData } = supabase.storage.from(uploadBucket).getPublicUrl(data.path);
+        setFormData(prev => ({ ...prev, video_url: pubData.publicUrl }));
+      } else {
+        alert("Upload non riuscito: assicurati che sia configurato un bucket di storage pubblico (es. 'videos') in Supabase.");
+      }
+    } catch (err: any) {
+      alert("Errore caricamento file: " + (err.message || 'Riprova'));
+    } finally {
+      setUploadingVideo(false);
+    }
   }
 
   function openAddModal() {
@@ -313,7 +361,7 @@ export default function GestioneMenuPage(props: GestionePageProps) {
         const { error } = await supabase.from('taste_menus').update(payload).eq('id', editingItem.id);
         if (error) throw error;
 
-        // Se è associato a un piatto di Locanda, sincronizza anche lì il video (modifica o rimozione)
+        // Se modificato o rimosso il video, sincronizza anche su Locanda Digitale
         if (editingLocandaId) {
           await fetch(`https://nnuhzrzoebudwyalevht.supabase.co/rest/v1/locanda_piatti?id=eq.${editingLocandaId}`, {
             method: 'PATCH',
@@ -342,7 +390,7 @@ export default function GestioneMenuPage(props: GestionePageProps) {
   }
 
   async function handleDelete(item: MenuItem) {
-    if (!confirm(`Vuoi eliminare "${item.nome_piatto}" dal menu?`)) return;
+    if (!confirm(`Vuoi eliminare "${item.nome_piatto}"?`)) return;
     try {
       const { error } = await supabase.from('taste_menus').delete().eq('id', item.id);
       if (error) throw error;
@@ -502,11 +550,9 @@ export default function GestioneMenuPage(props: GestionePageProps) {
           filteredItems.map(item => {
             const isActive = (item as any).is_active !== false;
             
-            // Video automatico da Locanda con matching intelligente
             const matchedLocanda = matchLocandaDish(item.nome_piatto, locandaDishes);
             const video3DUrl = matchedLocanda?.video_url || (item as any).video_url || null;
 
-            // Filtro immagini Unsplash
             const isUnsplash = (item.foto_url || '').toLowerCase().includes('unsplash.com');
             const realFoto = item.foto_url && !isUnsplash ? item.foto_url : null;
 
@@ -519,12 +565,12 @@ export default function GestioneMenuPage(props: GestionePageProps) {
                     : 'bg-zinc-950/40 border-zinc-900/60 opacity-60'
                 }`}
               >
-                {/* THUMBNAIL CON CLIC PER ANTEPRIMA VIDEO GRANDE */}
+                {/* THUMBNAIL STATICO AD ALTA PERFORMANCE: ZERO SCATTI, CLICCA PER VEDERE GRANDE */}
                 <div 
                   onClick={() => {
                     if (video3DUrl) setPreviewVideo({ url: video3DUrl, title: item.nome_piatto });
                   }}
-                  className={`w-16 h-24 rounded-xl overflow-hidden relative bg-black shrink-0 border border-amber-500/40 shadow-lg flex items-center justify-center ${video3DUrl ? 'cursor-pointer hover:border-amber-400 transition-colors' : ''}`}
+                  className={`w-16 h-24 rounded-xl overflow-hidden relative bg-black shrink-0 border border-amber-500/40 shadow-lg flex items-center justify-center ${video3DUrl ? 'cursor-pointer hover:border-amber-400 transition-colors group/thumb' : ''}`}
                   title={video3DUrl ? 'Clicca per vedere il video grande' : ''}
                 >
                   {video3DUrl ? (
@@ -537,8 +583,10 @@ export default function GestioneMenuPage(props: GestionePageProps) {
                         className="pointer-events-none w-full h-full object-cover" 
                       />
                       <span className="absolute top-1 left-1 px-1 py-0.5 bg-amber-500 text-slate-950 font-black text-[7px] uppercase rounded shadow z-10 pointer-events-none">3D 🎬</span>
-                      <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                        <Play size={12} fill="white" className="text-white opacity-80" />
+                      <div className="absolute inset-0 bg-black/25 flex items-center justify-center group-hover/thumb:bg-black/10 transition-colors">
+                        <div className="w-6 h-6 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center shadow">
+                          <Play size={10} fill="currentColor" className="ml-0.5" />
+                        </div>
                       </div>
                     </>
                   ) : realFoto ? (
@@ -634,7 +682,7 @@ export default function GestioneMenuPage(props: GestionePageProps) {
         ownerName={experience?.owner_name}
       />
 
-      {/* ─── MODALE PER VEDERE IL VIDEO 3D "GRANDE" (A SCHERMO INTERO A 60 FPS) ─── */}
+      {/* ─── MODALE PER VEDERE IL VIDEO 3D "GRANDE" (FLUIDO A 60 FPS) ─── */}
       {previewVideo && (
         <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex items-center justify-center p-4">
           <div className="relative w-full max-w-sm rounded-3xl overflow-hidden border border-white/20 shadow-2xl bg-black">
@@ -660,7 +708,7 @@ export default function GestioneMenuPage(props: GestionePageProps) {
               </div>
               <button
                 onClick={() => setPreviewVideo(null)}
-                className="px-3 py-1.5 rounded-xl bg-zinc-900 border border-zinc-700 text-zinc-300 text-xs font-bold hover:text-white"
+                className="px-3 py-1.5 rounded-xl bg-zinc-900 border border-zinc-700 text-zinc-300 text-xs font-bold hover:text-white cursor-pointer"
               >
                 Chiudi
               </button>
@@ -669,7 +717,7 @@ export default function GestioneMenuPage(props: GestionePageProps) {
         </div>
       )}
 
-      {/* ─── MODALE MODIFICA/AGGIUNTA CON CAMPO VIDEO 3D DEDICATO ─── */}
+      {/* ─── MODALE MODIFICA CON DRAG & DROP UPLOAD VIDEO INTEGRATO ─── */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-zinc-950 border border-amber-500/30 rounded-3xl max-w-xl w-full p-6 sm:p-8 space-y-5 shadow-2xl relative max-h-[92vh] overflow-y-auto my-8">
@@ -759,38 +807,86 @@ export default function GestioneMenuPage(props: GestionePageProps) {
                 />
               </div>
 
-              {/* CAMPO DEDICATO PER VIDEO 3D SPOT: IL RISTORATORE PUÒ MODIFICARLO O RIMUOVERLO */}
-              <div className="p-3 bg-purple-950/20 border border-purple-500/30 rounded-xl space-y-1.5">
+              {/* SEZIONE VIDEO 3D CON DRAG & DROP E MODIFICA / RIMOZIONE */}
+              <div className="p-3.5 bg-purple-950/20 border border-purple-500/30 rounded-2xl space-y-3">
                 <div className="flex justify-between items-center">
-                  <label className="block text-[10px] font-bold uppercase text-purple-300 flex items-center gap-1">
-                    <Sparkles size={12} className="text-purple-400" /> URL Video 3D (Spot Animato)
+                  <label className="block text-[10px] font-bold uppercase text-purple-300 flex items-center gap-1.5">
+                    <Sparkles size={13} className="text-purple-400" /> Video 3D (Spot Animato al Tavolo)
                   </label>
                   {formData.video_url && (
                     <button
                       type="button"
-                      onClick={() => setFormData({ ...formData, video_url: '' })}
+                      onClick={() => setFormData(prev => ({ ...prev, video_url: '' }))}
                       className="text-[10px] text-rose-400 hover:text-rose-300 font-bold underline cursor-pointer"
                     >
                       ✕ Rimuovi Video 3D
                     </button>
                   )}
                 </div>
-                <input
-                  type="url"
-                  placeholder="https://...mp4"
-                  value={formData.video_url}
-                  onChange={e => setFormData({ ...formData, video_url: e.target.value })}
-                  className="w-full bg-zinc-900 border border-purple-500/30 rounded-xl px-3 py-2 text-xs text-purple-200 outline-none focus:border-purple-400 font-mono"
-                />
-                <span className="text-[10px] text-zinc-400 block">
-                  Se inserito, il piatto mostrerà il video a 60 FPS al tavolo. Lascia vuoto per mostrare solo testo/foto.
-                </span>
+
+                {/* AREA DRAG & DROP */}
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDragging(false);
+                    if (e.dataTransfer.files?.[0]) handleVideoFileUpload(e.dataTransfer.files[0]);
+                  }}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all ${
+                    isDragging 
+                      ? 'border-purple-400 bg-purple-500/20 scale-[1.01]' 
+                      : 'border-purple-500/30 hover:border-purple-400/60 bg-black/40'
+                  }`}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="video/mp4,video/quicktime,video/webm"
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files?.[0]) handleVideoFileUpload(e.target.files[0]);
+                    }}
+                  />
+
+                  {uploadingVideo ? (
+                    <div className="flex items-center justify-center gap-2 text-purple-300 font-bold py-2">
+                      <RefreshCw className="w-4 h-4 animate-spin text-purple-400" /> Caricamento video in corso...
+                    </div>
+                  ) : formData.video_url ? (
+                    <div className="flex items-center justify-center gap-2 text-emerald-400 font-bold py-1">
+                      <Film size={16} /> Video collegato! Trascina qui un altro file per sostituirlo.
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <Upload className="w-5 h-5 text-purple-400 mx-auto" />
+                      <p className="text-xs font-bold text-zinc-300">
+                        Trascina qui il file video (.mp4) o <span className="text-purple-400 underline">sfoglia</span>
+                      </p>
+                      <span className="text-[10px] text-zinc-500 block">Formato verticale 9:16 o 16:9</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* OPPURE LINK DIRETTO */}
+                <div>
+                  <span className="text-[10px] text-zinc-400 block mb-1">Oppure incolla direttamente l&apos;URL del video:</span>
+                  <input
+                    type="url"
+                    placeholder="https://...mp4"
+                    value={formData.video_url}
+                    onChange={e => setFormData({ ...formData, video_url: e.target.value })}
+                    className="w-full bg-zinc-900 border border-purple-500/30 rounded-xl px-3 py-2 text-xs text-purple-200 outline-none focus:border-purple-400 font-mono"
+                  />
+                </div>
               </div>
 
               <div>
                 <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1">URL Foto (Opzionale)</label>
                 <input
                   type="url"
+                  placeholder="https://..."
                   value={formData.foto_url}
                   onChange={e => setFormData({ ...formData, foto_url: e.target.value })}
                   className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-amber-500 font-mono"
@@ -800,7 +896,7 @@ export default function GestioneMenuPage(props: GestionePageProps) {
               <div className="flex items-center justify-between p-3.5 bg-zinc-900/60 border border-zinc-800 rounded-xl">
                 <div>
                   <span className="font-bold text-white text-xs block">Visibile nel Menu al Tavolo</span>
-                  <span className="text-[11px] text-zinc-400">Se disattivato, risulterà "Fuori Menu".</span>
+                  <span className="text-[11px] text-zinc-400">Se disattivato, risulterà &quot;Fuori Menu&quot;.</span>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
@@ -844,7 +940,7 @@ export default function GestioneMenuPage(props: GestionePageProps) {
                 </button>
                 <button
                   type="submit"
-                  disabled={submitting}
+                  disabled={submitting || uploadingVideo}
                   className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black uppercase tracking-wider rounded-xl transition shadow-lg active:scale-95 cursor-pointer disabled:opacity-50"
                 >
                   {submitting ? 'Salvataggio...' : (editingItem ? 'Salva Modifiche' : 'Aggiungi')}

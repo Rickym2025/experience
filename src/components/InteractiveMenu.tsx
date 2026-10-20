@@ -44,11 +44,11 @@ const WINE_CATEGORIES = [
   'Distillati'
 ];
 
+// Accelerazione GPU Chrome (identica a Vision e Locanda)
 const GPU_ACCEL_STYLE: React.CSSProperties = {
   transform: 'translate3d(0, 0, 0)',
   WebkitTransform: 'translate3d(0, 0, 0)',
   backfaceVisibility: 'hidden',
-  WebkitBackfaceVisibility: 'hidden',
   willChange: 'transform',
 };
 
@@ -56,22 +56,19 @@ function cleanString(str: string): string {
   return str
     .toLowerCase()
     .replace(/\([^)]*\)/g, '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
 function getKeywords(str: string): string[] {
-  const stopWords = new Set(['con', 'di', 'del', 'della', 'delle', 'dei', 'e', 'ed', 'al', 'alla', 'alle', 'in', 'da', 'un', 'una', 'il', 'lo', 'la', 'i', 'gli', 'le']);
-  return cleanString(str)
-    .split(' ')
-    .filter(word => word.length > 2 && !stopWords.has(word));
+  const stopWords = new Set(['con', 'di', 'del', 'della', 'delle', 'dei', 'degli', 'e', 'ed', 'al', 'alla', 'alle', 'in', 'da', 'un', 'una', 'il', 'lo', 'la', 'i', 'gli', 'le']);
+  return cleanString(str).split(' ').filter(word => word.length > 2 && !stopWords.has(word));
 }
 
 function matchDishVideo(dishName: string, locandaItems: LocandaDish[]): string | null {
-  if (!dishName || locandaItems.length === 0) return null;
+  if (!dishName || !locandaItems.length) return null;
 
   const cleanedDish = cleanString(dishName);
   const dishKeywords = getKeywords(dishName);
@@ -86,7 +83,7 @@ function matchDishVideo(dishName: string, locandaItems: LocandaDish[]): string |
   let bestMatch: { video_url: string; score: number } | null = null;
   for (const item of locandaItems) {
     const locandaKeywords = getKeywords(item.nome_piatto);
-    if (locandaKeywords.length === 0 || dishKeywords.length === 0) continue;
+    if (!locandaKeywords.length || !dishKeywords.length) continue;
 
     const commonWords = dishKeywords.filter(k => locandaKeywords.includes(k));
     const score = commonWords.length / Math.min(dishKeywords.length, locandaKeywords.length);
@@ -131,9 +128,7 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
       )
         .then(res => res.json())
         .then(data => {
-          if (Array.isArray(data)) {
-            setLocandaDishes(data);
-          }
+          if (Array.isArray(data)) setLocandaDishes(data);
         })
         .catch(() => {});
     }
@@ -194,7 +189,7 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
   return (
     <div className="w-full pb-32">
       
-      {/* ─── MACRO-SELETTORE: CUCINA VS CARTA DEI VINI ─── */}
+      {/* ─── MACRO-SELETTORE CUCINA VS VINI ─── */}
       <div className="max-w-md mx-auto mb-6 p-1.5 rounded-2xl bg-zinc-950/80 border border-amber-500/30 backdrop-blur-xl shadow-2xl flex gap-1.5">
         <button
           onClick={() => handleTabChange('cucina')}
@@ -221,7 +216,7 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
         </button>
       </div>
 
-      {/* ─── FILTRO SOTTO-CATEGORIE MULTI-RIGA VISIBILE (ZERO SCROLL) ─── */}
+      {/* ─── SOTTO-CATEGORIE MULTI-RIGA VISIBILI (ZERO SCROLL, ZERO LINGUETTA) ─── */}
       <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5 mb-8 max-w-4xl mx-auto px-2">
         {currentCategories.map((cat) => (
           <button
@@ -238,7 +233,7 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
         ))}
       </div>
 
-      {/* ─── GRIGLIA PORTATE O BOTTIGLIE ─── */}
+      {/* ─── GRIGLIA PORTATE / VINI ─── */}
       {filteredItems.length === 0 ? (
         <div className="text-center py-16 text-zinc-300 bg-zinc-950/60 border border-white/10 rounded-3xl p-8 backdrop-blur-xl">
           Nessuna voce trovata per questa categoria.
@@ -249,7 +244,7 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
             const allergeniList = safeArray(item.allergeni);
             const videoUrl = matchDishVideo(item.nome_piatto, locandaDishes);
 
-            // Esclude categoricamente immagini demo di Unsplash
+            // Esclude categoricamente le immagini stock Unsplash
             const isUnsplash = (item.foto_url || '').toLowerCase().includes('unsplash.com');
             const realFotoUrl = item.foto_url && !isUnsplash && item.foto_url.trim().length > 0 ? item.foto_url : null;
             
@@ -263,31 +258,29 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
                 className="bg-zinc-950/65 hover:bg-zinc-900/75 border border-amber-500/20 hover:border-amber-500/40 rounded-3xl p-5 transition-all duration-300 flex flex-col justify-between group shadow-2xl backdrop-blur-xl relative overflow-hidden"
               >
                 <div>
-                  {/* MEDIA BOX: ACCELERATO GPU SENZA BLOCCHI */}
+                  {/* MEDIA BOX: ANTEPRIMA STATICA FLUIDA COME IN VISION (CLICCA PER APRIRE E VEDERE A 60 FPS) */}
                   {hasMedia && (
                     <div 
                       onClick={() => setActiveModalItem(item)}
-                      className="w-full h-52 rounded-2xl overflow-hidden relative bg-black mb-4 border border-white/10 cursor-pointer shadow-md [isolation:isolate]"
+                      className="w-full h-52 rounded-2xl overflow-hidden relative bg-black mb-4 border border-white/10 cursor-pointer shadow-md group/media [isolation:isolate]"
                     >
                       {videoUrl ? (
                         <>
                           <video
                             src={videoUrl}
+                            preload="metadata"
                             muted
-                            loop
                             playsInline
-                            autoPlay
-                            preload="auto"
                             style={GPU_ACCEL_STYLE}
-                            className="pointer-events-none w-full h-full object-cover"
+                            className="pointer-events-none w-full h-full object-cover group-hover/media:scale-105 transition-transform duration-500"
                           />
-                          <div className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-full bg-black/75 backdrop-blur-md border border-amber-500/40 text-amber-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow z-10 pointer-events-none">
+                          <div className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-full bg-black/80 backdrop-blur-md border border-amber-500/40 text-amber-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow z-10 pointer-events-none">
                             <Sparkles size={11} className="text-amber-400" /> Video 3D
                           </div>
 
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/15 hover:bg-transparent transition-all pointer-events-none">
-                            <div className="w-11 h-11 rounded-full bg-amber-500/90 text-slate-950 flex items-center justify-center shadow-xl">
-                              <Play size={18} fill="currentColor" className="ml-0.5" />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/25 group-hover/media:bg-transparent transition-all pointer-events-none">
+                            <div className="w-12 h-12 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center shadow-xl group-hover/media:scale-110 transition-transform">
+                              <Play size={20} fill="currentColor" className="ml-0.5" />
                             </div>
                           </div>
                         </>
@@ -295,7 +288,7 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
                         <img
                           src={realFotoUrl!}
                           alt={item.nome_piatto}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover group-hover/media:scale-105 transition-transform duration-500"
                         />
                       )}
                     </div>
@@ -375,9 +368,9 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
         </div>
       )}
 
-      {/* ─── MODALE DETTAGLI ─── */}
+      {/* ─── MODALE DETTAGLI (VIDEO SINGOLO RIPRODOTTO FLUIDO A SCHERMO INTERO A 60 FPS) ─── */}
       {activeModalItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/95 backdrop-blur-md animate-in fade-in">
           <div className="bg-[#0f1019] border border-amber-500/30 rounded-3xl max-w-md w-full p-6 relative shadow-2xl max-h-[92vh] overflow-y-auto">
             <button
               onClick={() => setActiveModalItem(null)}
@@ -405,14 +398,14 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
 
               if (modalVideo) {
                 return (
-                  <div className="w-full aspect-[9/16] max-h-[42vh] rounded-2xl overflow-hidden relative bg-black border border-white/10 mb-4 flex items-center justify-center shadow-inner [isolation:isolate]">
+                  <div className="w-full aspect-[9/16] max-h-[44vh] rounded-2xl overflow-hidden relative bg-black border border-white/10 mb-4 flex items-center justify-center shadow-inner [isolation:isolate]">
                     <video
                       src={modalVideo}
                       autoPlay
                       loop
                       muted
                       playsInline
-                      preload="auto"
+                      controls
                       style={GPU_ACCEL_STYLE}
                       className="w-full h-full object-cover"
                     />
@@ -495,7 +488,7 @@ export default function InteractiveMenu({ items, brandColor, slug, restaurantPho
         </aside>
       )}
 
-      {/* ─── MODALE INVIO COMANDA SU WHATSAPP ALLA CUCINA ─── */}
+      {/* ─── MODALE INVIO COMANDA SU WHATSAPP ─── */}
       {isOrderModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md p-4 flex items-center justify-center animate-in fade-in">
           <div className="bg-[#0b0d14] border border-amber-500/30 rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-4 relative shadow-2xl">

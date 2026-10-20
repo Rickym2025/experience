@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, use, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '@/lib/supabase';
 import { MenuItem, TasteExperience } from '@/types/experience';
 import NexusWidget from '@/components/NexusWidget';
@@ -134,6 +135,19 @@ export default function GestioneMenuPage(props: GestionePageProps) {
     is_active: true,
     allergeni: [] as string[]
   });
+
+  // Blocca lo scroll della pagina mentre il video è aperto (meno lavoro di compositing per Chrome)
+  useEffect(() => {
+    if (!previewVideo) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setPreviewVideo(null); };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [previewVideo]);
 
   useEffect(() => {
     async function loadData() {
@@ -575,13 +589,16 @@ export default function GestioneMenuPage(props: GestionePageProps) {
                 >
                   {video3DUrl ? (
                     <>
-                      <video 
-                        src={video3DUrl} 
-                        preload="metadata"
-                        muted 
-                        playsInline
-                        className="pointer-events-none w-full h-full object-cover" 
-                      />
+                      {/* Con il modale aperto smontiamo le anteprime: libera i decoder video di Chrome */}
+                      {!previewVideo && (
+                        <video 
+                          src={`${video3DUrl}#t=0.1`}
+                          preload="metadata"
+                          muted 
+                          playsInline
+                          className="pointer-events-none w-full h-full object-cover" 
+                        />
+                      )}
                       <span className="absolute top-1 left-1 px-1 py-0.5 bg-amber-500 text-slate-950 font-black text-[7px] uppercase rounded shadow z-10 pointer-events-none">3D 🎬</span>
                       <div className="absolute inset-0 bg-black/25 flex items-center justify-center group-hover/thumb:bg-black/10 transition-colors">
                         <div className="w-6 h-6 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center shadow">
@@ -683,9 +700,10 @@ export default function GestioneMenuPage(props: GestionePageProps) {
       />
 
       {/* ─── MODALE PER VEDERE IL VIDEO 3D "GRANDE" (FLUIDO A 60 FPS) ─── */}
-      {previewVideo && (
-        <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="relative w-full max-w-sm rounded-3xl overflow-hidden border border-white/20 shadow-2xl bg-black">
+      {/* Portal su body + overlay opaco SENZA backdrop-filter: il blur sopra/attorno a un <video> costringe Chrome a ricalcolarlo a ogni frame */}
+      {previewVideo && createPortal(
+        <div className="fixed inset-0 z-50 bg-black flex items-center justify-center p-4" onClick={() => setPreviewVideo(null)}>
+          <div onClick={e => e.stopPropagation()} className="relative w-full max-w-sm rounded-3xl overflow-hidden border border-white/20 bg-black">
             <button
               onClick={() => setPreviewVideo(null)}
               className="absolute top-3 right-3 z-20 w-10 h-10 rounded-full bg-black/70 text-white flex items-center justify-center border border-white/20 hover:bg-zinc-800 transition-colors cursor-pointer"
@@ -698,6 +716,7 @@ export default function GestioneMenuPage(props: GestionePageProps) {
                 autoPlay
                 controls
                 playsInline
+                preload="auto"
                 className="w-full h-full object-cover"
               />
             </div>
@@ -714,7 +733,8 @@ export default function GestioneMenuPage(props: GestionePageProps) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ─── MODALE MODIFICA CON DRAG & DROP UPLOAD VIDEO INTEGRATO ─── */}

@@ -50,6 +50,18 @@ const PRESET_CATEGORIES = [
   'Vini Bianchi', 'Vini Rossi', 'Aperitivi & Cocktail'
 ];
 
+const WINE_CATEGORIES = [
+  'Bollicine & Champagne',
+  'Vini Bianchi',
+  'Vini Rossi',
+  'Aperitivi & Cocktail',
+  'Vini da Dessert',
+  'Distillati'
+];
+
+const isWineCategory = (cat: string) =>
+  WINE_CATEGORIES.some(wc => wc.toLowerCase() === (cat || '').toLowerCase().trim());
+
 const LOCANDA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5udWh6cnpvZWJ1ZHd5YWxldmh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzMzUxMTMsImV4cCI6MjEwMzkxMTExM30.oYADAYynRXyQrfnTMgYUeXpIyML4YnS0VQp3y8HIdGU';
 
 // Normalizzazione e matching automatico intelligente
@@ -108,6 +120,7 @@ export default function GestioneMenuPage(props: GestionePageProps) {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [activeTab, setActiveTab] = useState<'cucina' | 'vini'>('cucina');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
@@ -292,7 +305,7 @@ export default function GestioneMenuPage(props: GestionePageProps) {
     setEditingItem(null);
     setEditingLocandaId(null);
     setFormData({
-      categoria: 'Primi Piatti',
+      categoria: activeTab === 'vini' ? 'Vini Rossi' : 'Primi Piatti',
       custom_categoria: '',
       nome_piatto: '',
       prezzo: '',
@@ -414,9 +427,18 @@ export default function GestioneMenuPage(props: GestionePageProps) {
     }
   }
 
-  const categoriesPresent = ['all', ...Array.from(new Set(items.map(i => i.categoria)))];
+  const foodItems = items.filter(i => !isWineCategory(i.categoria));
+  const wineItems = items.filter(i => isWineCategory(i.categoria));
+  const currentPool = activeTab === 'cucina' ? foodItems : wineItems;
 
-  const filteredItems = items.filter(i => {
+  function handleTabChange(tab: 'cucina' | 'vini') {
+    setActiveTab(tab);
+    setSelectedCategory('all');
+  }
+
+  const categoriesPresent = ['all', ...Array.from(new Set(currentPool.map(i => i.categoria)))];
+
+  const filteredItems = currentPool.filter(i => {
     const matchesCat = selectedCategory === 'all' || i.categoria === selectedCategory;
     const matchesSearch = 
       i.nome_piatto.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -517,6 +539,32 @@ export default function GestioneMenuPage(props: GestionePageProps) {
       </header>
 
       <div className="relative z-10 max-w-6xl mx-auto px-4 pt-6 pb-4 space-y-4">
+        {/* Selettore Cucina / Vini */}
+        <div className="max-w-md p-1.5 rounded-2xl bg-zinc-950/80 border border-amber-500/30 backdrop-blur-xl shadow-2xl flex gap-1.5">
+          <button
+            onClick={() => handleTabChange('cucina')}
+            className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
+              activeTab === 'cucina'
+                ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950'
+                : 'text-zinc-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Utensils className="w-4 h-4" />
+            <span>La Cucina ({foodItems.length})</span>
+          </button>
+          <button
+            onClick={() => handleTabChange('vini')}
+            className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
+              activeTab === 'vini'
+                ? 'bg-gradient-to-r from-purple-600 to-amber-600 text-white'
+                : 'text-zinc-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Wine className="w-4 h-4" />
+            <span>Vini &amp; Bar ({wineItems.length})</span>
+          </button>
+        </div>
+
         <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
           <div className="relative flex-1">
             <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-amber-400" />
@@ -544,7 +592,7 @@ export default function GestioneMenuPage(props: GestionePageProps) {
                   : 'bg-zinc-950/75 hover:bg-zinc-900 text-zinc-300 border border-zinc-800 backdrop-blur-xl'
               }`}
             >
-              {cat === 'all' ? `Tutte (${items.length})` : cat}
+              {cat === 'all' ? `Tutte (${currentPool.length})` : cat}
             </button>
           ))}
         </div>
@@ -610,7 +658,9 @@ export default function GestioneMenuPage(props: GestionePageProps) {
                     <img src={realFoto} alt={item.nome_piatto} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full bg-zinc-900/80 flex flex-col items-center justify-center text-amber-400/70 text-[10px] font-bold">
-                      <Utensils className="w-4 h-4 mb-1 text-amber-500/50" /> Testo
+                      {isWineCategory(item.categoria)
+                        ? <Wine className="w-5 h-5 text-purple-400/60" />
+                        : <Utensils className="w-5 h-5 text-amber-500/50" />}
                     </div>
                   )}
                 </div>
